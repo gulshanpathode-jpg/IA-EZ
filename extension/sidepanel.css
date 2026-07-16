@@ -1,0 +1,2294 @@
+/* ═════════════════════════════════════════════════════════════════
+   Smart Fill - side panel styles
+   Premium SaaS look inspired by the reference screenshot:
+     · soft neutral background
+     · paper-white cards with subtle 1px borders
+     · accent blue used sparingly for primary actions and progress
+     · vertical icon-rail navigation on the left of the content
+   ═════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ═══ SmartFill UI 2.0 — EZ Inspections "Indigo" identity ═══ */
+
+  /* Surfaces */
+  --bg:           #f4f5fb;
+  --card:         #ffffff;
+  --card-hover:   #fafbff;
+  --canvas-bg:    #f5f6fd;
+
+  /* Borders */
+  --border:        #e5e7f2;
+  --border-strong: #d2d6e8;
+
+  /* Text */
+  --text:        #14162e;
+  --text-muted:  #5a6079;
+  --text-faint:  #989eb8;
+
+  /* Brand — indigo */
+  --primary:        #4f46e5;
+  --primary-hover:  #4338ca;
+  --primary-soft:   #eef0fe;
+  --accent:         #818cf8;
+
+  /* Header gradient stops + brand glow */
+  --grad-a: #23215b;
+  --grad-b: #4338ca;
+  --grad-c: #6366f1;
+  --glow:   rgba(79, 70, 229, 0.32);
+
+  /* Canvas decorations */
+  --dot:        rgba(79, 70, 229, 0.16);
+  --ring-track: rgba(79, 70, 229, 0.12);
+
+  /* Semantic */
+  --success:       #10b981;
+  --success-soft:  #d9f7ec;
+  --warning:       #f59e0b;
+  --warning-soft:  #fdf0d2;
+  --danger:        #ef4444;
+  --danger-soft:   #fde3e3;
+  --amber:         #f59e0b;
+  --rose:          #b91c1c;
+
+  /* AI-review accent — shifted to fuchsia so AI suggestions stand apart
+     from the indigo brand color. Variable names kept for compatibility. */
+  --purple:        #e879f9;
+  --purple-strong: #c026d3;
+  --purple-soft:   #fbe9fe;
+  --purple-text:   #86198f;
+
+  /* Answer-block borders (match the tints below) */
+  --form-border:     #d4defc;
+  --image-border:    #f3d1f9;
+  --verified-border: #b9ecd6;
+
+  /* User-configurable answer-block tints. These can be overridden at
+     runtime from the Config tab; the defaults match the palette above
+     so removing the override returns the cards to their original look. */
+  --cfg-form-bg:    #eef0fe;
+  --cfg-image-bg:   #fbe9fe;
+  --cfg-current-bg: #f6f7fb;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20, 22, 46, 0.05);
+  --shadow:    0 6px 18px rgba(20, 22, 46, 0.07);
+  --shadow-lg: 0 16px 48px rgba(20, 22, 46, 0.12);
+
+  /* Misc */
+  --radius:    16px;
+  --radius-sm: 12px;
+  --radius-xs: 8px;
+
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', -apple-system,
+               BlinkMacSystemFont, 'Inter', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Dark-mode brand hues — surfaces, semantics and component fixes live
+   in the UI 2.0 layer at the end of this file. */
+  :root[data-theme="dark"] {
+    --primary:       #8a84f5;
+    --primary-hover: #a5a0f8;
+    --primary-soft:  rgba(138, 132, 245, 0.14);
+    --accent:        #b3aefb;
+
+    --grad-a: #16143c;
+    --grad-b: #322da0;
+    --grad-c: #5a51ee;
+    --glow:   rgba(138, 132, 245, 0.35);
+
+    --dot:        rgba(138, 132, 245, 0.20);
+    --ring-track: rgba(138, 132, 245, 0.15);
+
+    --purple:        #f0abfc;
+    --purple-strong: #d946ef;
+    --purple-soft:   rgba(217, 70, 239, 0.16);
+    --purple-text:   #f5d0fe;
+
+    --form-border:  rgba(138, 132, 245, 0.32);
+    --image-border: rgba(240, 171, 252, 0.28);
+  }
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * The Chrome side-panel API doesn't accept a fixed width - the user resizes
+ * the panel by hand. The layout below is designed for a sweet spot of
+ * ~640px (≈ 40% of a 1600px display), and remains usable down to 280px and
+ * up to 900+px without breaking. The values below set guard-rails:
+ *   · min-width 280px → the layout reflows cleanly all the way down to a
+ *     narrow panel, so no horizontal scrollbar appears at usable widths
+ *   · sensible max-width inside cards so prose doesn't wrap awkwardly when
+ *     the user drags the panel wide
+ */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 280px;
+}
+
+button { font-family: inherit; cursor: pointer; border: 0; background: transparent; }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+input, textarea, select { font-family: inherit; }
+ul { list-style: none; }
+h1, h2, h3 { font-weight: 600; letter-spacing: -0.2px; }
+
+/* ── Top bar ────────────────────────────────────────────────── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--primary), #60a5fa);
+  color: #fff;
+  display: grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(36, 102, 235, 0.28);
+}
+.brand h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.top-actions { display: flex; gap: 4px; }
+.icon-button {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  display: grid; place-items: center;
+  transition: background 120ms, color 120ms;
+}
+.icon-button:hover { background: var(--primary-soft); color: var(--primary); }
+
+/* ── Grid: rail + main ──────────────────────────────────────── */
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  min-height: 0;
+}
+
+/* ── Vertical nav rail ───────────────────────────────────────── */
+.rail {
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 14px 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.rail-tab {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 500; letter-spacing: 0.1px;
+  transition: background 120ms, color 120ms, transform 120ms;
+}
+.rail-tab svg { transition: transform 160ms; }
+.rail-tab:hover { background: var(--primary-soft); color: var(--primary); }
+.rail-tab.is-active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(36, 102, 235, 0.18);
+}
+.rail-tab.is-active svg { transform: scale(1.05); }
+
+/* ── Main panel ──────────────────────────────────────────────── */
+.main {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+
+/* Tab panels */
+.tab-panel { display: none; flex-direction: column; gap: 14px; }
+.tab-panel.is-active { display: flex; }
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Detection card ──────────────────────────────────────────── */
+.detection-card { padding: 14px 16px; }
+.detection-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.detection-left { min-width: 0; }
+.detection-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.detection-name {
+  font-size: 14.5px; font-weight: 600;
+  margin-top: 2px;
+  color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.detection-url {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.detection-surveytype-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.detection-surveytype {
+  font-size: 14px; font-weight: 600;
+  margin-top: 2px;
+  color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.detection-address-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.detection-address-block[hidden] { display: none; }
+
+/* ── Photo-date check flag (detection card, under the address) ────────
+   "Taken On" (from each photo's picture page) vs the job's Completed Date
+   Time: a checking state while pages are fetched, green "okay" when every
+   photo's day matches, or red flag pinning the stale photos' thumbnails. */
+.detection-photodates-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.detection-photodates-block[hidden] { display: none; }
+.photodates-flag {
+  margin-top: 3px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.photodates-flag.is-ok {
+  background: var(--success-soft);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+.photodates-flag.is-warn {
+  background: var(--danger-soft);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+.photodates-msg { display: flex; align-items: flex-start; gap: 7px; }
+.photodates-msg svg { flex: none; margin-top: 2.5px; }
+.photodates-msg svg.spin { animation: photodates-spin 0.8s linear infinite; }
+@keyframes photodates-spin { to { transform: rotate(360deg); } }
+
+/* Pinned stale-photo thumbnails: image + the day it was actually taken. */
+.stale-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+.stale-thumb {
+  width: 50px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.stale-thumb img,
+.stale-thumb .stale-thumb-ph {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  border: 1.5px solid var(--danger);
+  object-fit: cover;
+  display: block;
+  transition: box-shadow 120ms, transform 100ms;
+}
+.stale-thumb:hover img,
+.stale-thumb:hover .stale-thumb-ph { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25); }
+.stale-thumb:active { transform: scale(0.97); }
+.stale-thumb .stale-thumb-ph {
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.stale-thumb-date {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  color: #b91c1c;
+  white-space: nowrap;
+}
+.detection-address-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+}
+.detection-address {
+  font-size: 13.5px; font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  flex: 1; min-width: 0;
+}
+.detection-address-actions {
+  display: flex; gap: 4px;
+  flex-shrink: 0;
+}
+.icon-button-sm { width: 28px; height: 28px; border-radius: 7px; }
+
+/* ── Status card ─────────────────────────────────────────────── */
+.status-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.status-head h2 { font-size: 15px; }
+/* Description line is intentionally hidden - element kept in DOM so the
+   existing pipeline can keep assigning textContent without errors. */
+.status-desc { display: none !important; }
+.status-card .status-head { margin-bottom: 12px; }
+
+.canvas {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border);
+  min-height: 240px;
+  display: grid; place-items: center;
+}
+.canvas-bg {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.5;
+}
+.canvas-inner {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 20px;
+  text-align: center;
+}
+.canvas-ring {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 16px;
+}
+.canvas-ring svg {
+  width: 92px;
+  height: 92px;
+  display: block;
+}
+.ring-track {
+  fill: none;
+  stroke: rgba(36, 102, 235, 0.14);
+  stroke-width: 4.5;
+}
+.ring-progress {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  /* 2π * 28 ≈ 175.93 */
+  stroke-dasharray: 175.93;
+  stroke-dashoffset: 175.93;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 480ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ring-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  pointer-events: none;
+}
+.ring-icon svg {
+  /* Override the .canvas-ring svg full-bleed rule above */
+  width: 28px;
+  height: 28px;
+}
+
+/* Optional spinning state - added by JS during the 'uploading' / 'analyzing'
+   stages to make the ring feel alive while progress is indeterminate. */
+.canvas-ring.is-spinning .ring-progress {
+  animation: nsr-ring-spin 1.4s linear infinite;
+}
+@keyframes nsr-ring-spin {
+  0%   { transform: rotate(-90deg); }
+  100% { transform: rotate(270deg); }
+}
+
+.canvas-title {
+  font-size: 16px; font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--text);
+}
+.canvas-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  max-width: 260px;
+  line-height: 1.45;
+}
+.canvas-progress {
+  margin-top: 14px;
+  font-size: 11.5px;
+  letter-spacing: 1.4px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 13.5px; font-weight: 600;
+  transition: background 140ms, transform 80ms, box-shadow 140ms, color 140ms;
+  margin-top: 14px;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(36, 102, 235, 0.22);
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { background: var(--text-faint); box-shadow: none; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px; font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  transition: background 140ms;
+}
+.btn-ghost:hover { background: var(--primary-hover); }
+
+.btn-text {
+  padding: 8px 8px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 6px;
+  transition: background 120ms, color 120ms;
+}
+.btn-text:hover { background: var(--bg); color: var(--text); }
+
+/* Accept-all gets a subtle green tint to distinguish it from Reject-all,
+   which sits next to it in the bulk-bar. Both are still .btn-text so the
+   layout/sizing matches; only the rest state color shifts. */
+#btn-accept-all { color: var(--success); }
+#btn-accept-all:hover { background: var(--success-soft); color: #047857; }
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+.badge-idle      { background: var(--bg); color: var(--text-muted); }
+.badge-progress  { background: var(--primary-soft); color: var(--primary); }
+.badge-success   { background: var(--success-soft); color: #047857; }
+.badge-error     { background: var(--danger-soft); color: #b91c1c; }
+.badge-warning   { background: var(--warning-soft); color: #92400e; }
+
+/* ── Stat grid ───────────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.stat-cell {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.stat-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+}
+.stat-icon-amber { background: var(--warning-soft); color: var(--amber); }
+.stat-icon-rose  { background: var(--danger-soft);  color: var(--rose); }
+.stat-label {
+  font-size: 10px; letter-spacing: 1.4px;
+  color: var(--text-faint); font-weight: 600;
+  text-transform: uppercase;
+}
+.stat-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+/* ── Queue / suggestions ─────────────────────────────────────── */
+.queue-card { padding: 16px; }
+
+/* Header row: title block on the left, bulk actions on the right. */
+.queue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.queue-title-block { min-width: 0; flex: 1 1 auto; }
+.queue-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; letter-spacing: 1.4px;
+  color: var(--text-faint); font-weight: 700;
+}
+/* Subtitle: '2 to review · 1 accepted · 0 rejected' - replaces the old pills */
+.queue-summary {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.queue-summary span { color: var(--text); font-weight: 600; }
+.queue-summary .dot-sep {
+  color: var(--text-faint);
+  font-weight: 400;
+  margin: 0 6px;
+}
+
+.bulk-bar {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* ── Filter tabs (All / Different / Matched) ─────────────────── */
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.filter-tab {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  transition: background 140ms, color 140ms, box-shadow 140ms;
+  white-space: nowrap;
+}
+/* On very narrow panels let the text label ellipsize rather than overflow.
+   The dot and count stay fixed (flex-shrink:0) so the number is never cut. */
+.filter-tab > span:not([class]) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.filter-tab:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.04);
+}
+.filter-tab.is-active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+.filter-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.filter-tab.is-active .filter-count {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.filter-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.filter-dot-different { background: var(--purple); }
+.filter-dot-matched   { background: var(--success); }
+
+.suggestion-list {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* Single suggestion card.
+   Default border-left = light purple, reflecting "AI suggests a change".
+   The is-matched, is-accepted, is-rejected modifiers re-color appropriately. */
+.suggestion {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color 140ms, background 140ms, transform 140ms;
+  cursor: pointer;
+  animation: card-in 240ms ease-out both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.suggestion:hover { background: var(--card-hover); border-color: var(--border-strong); }
+.suggestion.is-pending  { border-left-color: var(--purple); }
+.suggestion.is-accepted-form     { border-left-color: var(--primary); background: #fafcff; }
+.suggestion.is-accepted-image    { border-left-color: var(--purple);  background: #faf8ff; }
+.suggestion.is-accepted-verified { border-left-color: var(--success); background: #f6fefb; }
+.suggestion.is-rejected { border-left-color: var(--text-faint); background: #fafafa; opacity: 0.85; }
+.suggestion.is-matched  { border-left-color: var(--success); }
+
+.suggestion-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 8px;
+}
+.suggestion-section {
+  font-size: 10.5px; letter-spacing: 1.2px;
+  color: var(--text-faint); text-transform: uppercase;
+  font-weight: 600;
+}
+.suggestion-question {
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.suggestion-status {
+  font-size: 10px; letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.suggestion-status.is-pending  { background: var(--purple-soft); color: var(--purple-text); }
+.suggestion-status.is-accepted { background: var(--success-soft); color: #047857; }
+.suggestion-status.is-rejected { background: var(--bg);            color: var(--text-muted); }
+.suggestion-status.is-matched  { background: var(--success-soft);  color: #047857; }
+
+.answer-row {
+  display: grid;
+  grid-template-columns: 1fr 16px 1fr;
+  align-items: stretch;
+  gap: 6px;
+  font-size: 12px;
+}
+.answer-cell {
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.answer-cell.is-prev { color: var(--danger); background: #fff5f5; border-color: #fee4e4; }
+.answer-cell.is-next { color: #047857;       background: #f0fdf6; border-color: #d4f1e1; }
+.answer-cell .answer-label {
+  font-size: 9.5px; letter-spacing: 1.2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: 0.7;
+  margin-bottom: 3px;
+}
+.answer-cell .answer-value {
+  font-size: 12px;
+  font-weight: 600;
+  word-break: break-word;
+  line-height: 1.4;
+}
+.answer-arrow {
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+/* ── Source photos (AI evidence) ─────────────────────────────── */
+.source-photos {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+}
+.source-photos-label {
+  font-size: 9.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.source-photos-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.source-photo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.4;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border: 1px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.source-photo-link:hover {
+  background: #dbeafe;
+  border-color: var(--primary);
+}
+.source-photo-link:active { transform: translateY(1px); }
+.source-photo-link svg { flex-shrink: 0; }
+
+/* "Related pages" pills - non-interactive informational tags shown below
+   the Source photos block. Use a muted tone so they stay subordinate to
+   the clickable photo links above them. */
+.source-label-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated, var(--bg));
+  border: 1px solid var(--border);
+}
+.source-label-pill svg { flex-shrink: 0; opacity: 0.8; }
+
+.suggestion-actions {
+  display: flex; gap: 6px; justify-content: flex-end;
+}
+.action-btn {
+  padding: 6px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 120ms, color 120ms, transform 80ms;
+}
+.action-btn:active { transform: translateY(1px); }
+.action-accept     { background: var(--success); color: #fff; }
+.action-accept:hover { background: #059669; }
+.action-reject     { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+.action-reject:hover { background: #f0f2f6; color: var(--text); }
+.action-reconsider { background: var(--primary-soft); color: var(--primary); }
+.action-reconsider:hover { background: #dbeafe; }
+
+/* ═════════════════════════════════════════════════════════════════
+   Verify-answer redesign - answer blocks, banners, references row.
+   The existing .answer-row / .answer-cell / .answer-arrow rules above
+   are LEGACY (kept for safety; remove in a follow-up cleanup once the
+   new layout has shipped). Nothing in the new flow renders them.
+   ═════════════════════════════════════════════════════════════════ */
+
+/* Conflict header - small light-purple chip above the 3 blocks in Case A.
+   Tells the user at a glance that the two AI passes disagreed. */
+.conflict-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--purple-soft);
+  color: var(--purple-text);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.conflict-header svg { flex-shrink: 0; }
+
+/* Applied banner - strip across the top of a card after the user has
+   taken an action. Reuses the semantic colour tokens. */
+.applied-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.applied-banner.banner-success { background: var(--success-soft); color: #047857; }
+.applied-banner.banner-muted   { background: var(--bg);           color: var(--text-muted); }
+.applied-banner svg { flex-shrink: 0; }
+
+/* The grid that holds the answer blocks. blocks-3 is Case A, blocks-2
+   is Case B / Case C, blocks-1 is post-action / rejected.
+   Falls back to a single column under ~420px so narrow side panels
+   stay readable. */
+.suggestion-blocks {
+  display: grid;
+  gap: 8px;
+}
+.suggestion-blocks.blocks-1 { grid-template-columns: 1fr; }
+.suggestion-blocks.blocks-2 { grid-template-columns: 1fr 1fr; }
+.suggestion-blocks.blocks-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 540px) {
+  .suggestion-blocks.blocks-2,
+  .suggestion-blocks.blocks-3 { grid-template-columns: 1fr; }
+}
+
+/* The reusable answer-block component.
+   Same shape for every kind; the modifier supplies the colour palette. */
+.answer-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: var(--card);
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 0;
+  transition: border-color 140ms, background 140ms;
+}
+.answer-block-head {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.answer-block-icon { display: inline-grid; place-items: center; }
+.answer-block-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.answer-block-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.45;
+  word-break: break-word;
+  margin-top: 4px;
+}
+.answer-block-helper {
+  font-size: 10px;
+  color: var(--text-faint);
+  line-height: 1.35;
+  margin-top: 3px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* Kind modifiers - each gets its own soft tint + accent.
+     current   neutral (the reference point)
+     form      blue    (data extracted from form pages)
+     image     purple  (data inferred from images - different source)
+     verified  green   (both passes agree - strongest affordance)
+   Backgrounds use CSS variables that can be overridden from Config. */
+.answer-block--current {
+  background: var(--cfg-current-bg);
+  border-color: var(--border);
+}
+.answer-block--current .answer-block-head { color: var(--text-muted); }
+
+.answer-block--form {
+  background: var(--cfg-form-bg);
+  border-color: #d6e3fd;
+}
+.answer-block--form .answer-block-head { color: var(--primary); }
+
+.answer-block--image {
+  background: var(--cfg-image-bg);
+  border-color: #d8ccfa;
+}
+.answer-block--image .answer-block-head { color: var(--purple-text); }
+
+.answer-block--verified {
+  background: var(--success-soft);
+  border-color: #b6ecd2;
+}
+.answer-block--verified .answer-block-head { color: #047857; }
+.answer-block--verified .answer-block-icon { color: var(--success); }
+
+/* Matched-row - compact one-line layout for questions that are
+   already correct. Lives under the Matched filter tab. */
+.matched-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--success-soft);
+  border: 1px solid #b6ecd2;
+}
+.matched-icon {
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--success);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.matched-text { min-width: 0; }
+.matched-title {
+  font-size: 10px; letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #047857;
+}
+.matched-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+/* References row - groups source-photos and source-labels under the
+   answer blocks. Each child keeps its existing pill / link treatment. */
+.references-row {
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* Action button additions for the new pass-specific applies. The
+   existing .action-accept / .action-reject / .action-reconsider are
+   reused where they make sense. */
+.action-apply-form {
+  background: var(--primary); color: #fff;
+}
+.action-apply-form:hover { background: var(--primary-hover); }
+.action-apply-image {
+  background: var(--purple-strong); color: #fff;
+}
+.action-apply-image:hover { background: #7c3aed; }
+.action-apply-verified {
+  background: var(--success); color: #fff;
+}
+.action-apply-verified:hover { background: #059669; }
+
+/* Status pill colour additions for the new sub-states. */
+.suggestion-status.is-accepted { background: var(--success-soft); color: #047857; }
+
+/* Card-level dimming after an action keeps the post-action card
+   visually present but recessed, so the eye stays on pending work. */
+.suggestion.is-accepted-form .answer-block--form,
+.suggestion.is-accepted-image .answer-block--image,
+.suggestion.is-accepted-verified .answer-block--verified {
+  border-width: 1.5px;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   End verify-answer redesign
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ── Warning card ────────────────────────────────────────────── */
+.warning-card { border-left: 3px solid var(--warning); }
+.warning-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.warning-icon {
+  width: 30px; height: 30px;
+  background: var(--warning-soft);
+  color: var(--amber);
+  border-radius: 8px;
+  display: grid; place-items: center;
+}
+.warning-head h3 { font-size: 14px; font-weight: 600; }
+.warning-body { color: var(--text-muted); font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+.warning-list {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.warning-list-title {
+  font-size: 10.5px; letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--text-faint); font-weight: 700;
+  margin-bottom: 10px;
+}
+.warning-list ul { list-style: none; margin: 0; padding: 0; }
+
+/* Base row reset - specific row types below opt back into layout. */
+.warning-list ul li {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+/* Case-type group heading. */
+.warning-list ul li.supported-group {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  margin: 14px 0 7px;
+}
+.warning-list ul li.supported-group:first-child { margin-top: 0; }
+.supported-group-name {
+  font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase;
+  font-weight: 700; color: var(--text-faint);
+}
+.warning-list ul li.supported-group.is-active .supported-group-name {
+  color: var(--primary);
+}
+.supported-group-tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .3px;
+  text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.supported-group-tag.tag-here {
+  background: var(--success-soft); color: #047857;
+}
+.supported-group-tag.tag-other {
+  background: rgba(148,163,184,.16); color: #64748b;
+}
+
+/* Individual form row: a card with the name + a "detected here" badge on
+   top, and the flow description beneath. Mirrors the .image-card look. */
+.warning-list ul li.supported-form {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+.warning-list ul li.supported-form:last-of-type { margin-bottom: 0; }
+.supported-form-name {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-weight: 600; color: var(--text); font-size: 12.5px;
+}
+.supported-form-match {
+  font-weight: 700; color: #047857; font-size: 9.5px;
+  letter-spacing: .3px; text-transform: uppercase;
+  background: var(--success-soft);
+  padding: 2px 7px; border-radius: 999px;
+}
+.supported-form-flow {
+  font-size: 11px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 5px;
+}
+.supported-form-flow::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--primary); flex-shrink: 0; opacity: .55;
+}
+
+/* The form that matched the current page header - lift it with the primary
+   accent so the inspector sees the active form at a glance. */
+.warning-list ul li.supported-form.is-detected {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+
+/* Explanatory footer note about case-type gating. */
+.warning-list ul li.supported-note {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; line-height: 1.45;
+  color: var(--text-faint);
+}
+
+/* ── Activity tab ────────────────────────────────────────────── */
+.activity-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.activity-head h2 { font-size: 15px; }
+.activity-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 65vh; overflow-y: auto;
+}
+.activity-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.activity-item:last-child { border-bottom: 0; }
+.activity-time {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  flex-shrink: 0;
+  margin-top: 1px;
+  min-width: 56px;
+}
+.activity-message { color: var(--text); line-height: 1.4; }
+.activity-item.is-error .activity-message { color: var(--danger); }
+.activity-item.is-success .activity-message { color: #047857; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: 28px 20px;
+  color: var(--text-muted);
+}
+.empty-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--bg);
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+.empty-state p { font-size: 14px; font-weight: 600; color: var(--text); }
+.empty-state span { font-size: 12px; margin-top: 4px; }
+
+/* ── Config tab ──────────────────────────────────────────────── */
+.form-row { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.form-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+.form-input:focus { outline: 2px solid rgba(36, 102, 235, 0.25); border-color: var(--primary); }
+.form-hint { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 4px; }
+
+.switch {
+  display: inline-flex; align-items: center; gap: 10px;
+  cursor: pointer;
+}
+.switch input { display: none; }
+.switch-slider {
+  width: 34px; height: 20px;
+  background: var(--border);
+  border-radius: 999px;
+  position: relative;
+  transition: background 140ms;
+  flex-shrink: 0;
+}
+.switch-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 140ms;
+}
+.switch input:checked + .switch-slider { background: var(--primary); }
+.switch input:checked + .switch-slider::after { transform: translateX(14px); }
+.switch-label { font-size: 13px; color: var(--text); }
+
+/* ── Sync-tab "Main" label (sits inside the status card, above the
+   Status heading, matching the look of the Detected-Form label inside
+   the detection card) ─────────────────────────────────────────── */
+.status-section-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* ── Config: subheading for grouped settings ─────────────────── */
+.config-subhead {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 18px 0 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Config: per-block colour pickers ────────────────────────── */
+.color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  margin-bottom: 8px;
+}
+.color-row-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.color-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+.color-row-sub {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.color-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.color-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 36px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 0;
+  background: var(--card);
+  cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 4px; }
+.color-input::-moz-color-swatch    { border: none; border-radius: 4px; }
+.color-reset {
+  font-size: 11.5px;
+  padding: 4px 8px;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.conn { display: flex; align-items: center; gap: 6px; }
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-faint);
+  transition: background 140ms;
+}
+.conn-dot.is-online { background: var(--success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); }
+.conn-dot.is-error  { background: var(--danger);  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+.version { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--text-faint); }
+
+/* ── Footer "Powered by DhanInfo" credit (bottom-right) ──────── */
+.footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.footer-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.footer-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: block;
+}
+.footer-credit-text {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.footer-sep {
+  color: var(--border-strong);
+  font-weight: 400;
+  user-select: none;
+}
+
+/* On very narrow panels (~440px and below) hide the "by DhanInfo" text,
+   tighten the outer padding, and compress the filter segmented-control so
+   its labels stay readable well before they ever need to ellipsize. */
+@media (max-width: 440px) {
+  .footer-credit-text { display: none; }
+  .main { padding: 14px 12px; }
+  .filter-tabs { gap: 3px; padding: 3px; }
+  .filter-tab { padding: 7px 6px; gap: 4px; font-size: 12px; }
+  .filter-count { min-width: 18px; padding: 1px 6px; }
+}
+
+/* ── Toast ───────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 60px;
+  transform: translateX(-50%) translateY(20px);
+  background: #0f1729;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms, transform 200ms;
+  z-index: 100;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Skeleton loaders ────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #eef0f4 0%, #f7f8fb 50%, #eef0f4 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: skel 1.4s linear infinite;
+}
+@keyframes skel { to { background-position: -200% 0; } }
+.skeleton-line { height: 12px; margin-bottom: 8px; }
+.skeleton-line.short { width: 40%; }
+
+/* ── Scrollbar polish ────────────────────────────────────────── */
+.main::-webkit-scrollbar,
+.suggestion-list::-webkit-scrollbar,
+.activity-list::-webkit-scrollbar {
+  width: 8px;
+}
+.main::-webkit-scrollbar-thumb,
+.suggestion-list::-webkit-scrollbar-thumb,
+.activity-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.main::-webkit-scrollbar-track,
+.suggestion-list::-webkit-scrollbar-track,
+.activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   IMAGES TAB
+   Built from the same design tokens used by the Sync tab. New utilities
+   for the search bar, sort segmented control, and image gallery - all
+   re-using the existing card / badge / button / toast primitives.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Survey metadata card ────────────────────────────────────────── */
+.survey-meta-card { padding: 12px 16px; }
+.survey-meta-card .meta-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 0;
+}
+.survey-meta-card .meta-row + .meta-row {
+  border-top: 1px solid var(--border);
+}
+.survey-meta-card .meta-label {
+  font-size: 10.5px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 700;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+.survey-meta-card .meta-value {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Toolbar card: search + sort + secondary actions ─────────────── */
+.toolbar-card { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  transition: border-color 140ms, box-shadow 140ms;
+}
+.search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(36, 102, 235, 0.12);
+}
+.search-bar .search-icon { color: var(--text-faint); flex-shrink: 0; }
+.search-bar input {
+  flex: 1; min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  outline: 0;
+}
+.search-bar input::placeholder { color: var(--text-faint); }
+.image-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  min-width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Segmented sort control */
+.sort-controls {
+  display: flex; align-items: center; gap: 10px;
+}
+.sort-label {
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sort-buttons {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg);
+  border-radius: 9px;
+  flex: 1;
+}
+.sort-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  transition: background 140ms, color 140ms, box-shadow 140ms;
+  white-space: nowrap;
+}
+.sort-btn:hover:not(.is-active):not(.is-disabled) {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.04);
+}
+.sort-btn.is-active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+.sort-btn.is-disabled,
+.sort-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Progress card (Images pipeline) ─────────────────────────────── */
+.progress-card { padding: 14px 16px; }
+.progress-card .progress-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 8px;
+}
+.progress-card .progress-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.progress-card .progress-count {
+  font-size: 11.5px;
+  color: var(--primary);
+  font-weight: 600;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.progress-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ── Image gallery ───────────────────────────────────────────────── */
+.gallery-card { padding: 8px; }
+.image-gallery {
+  display: flex; flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.image-gallery::-webkit-scrollbar { width: 8px; }
+.image-gallery::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.image-gallery::-webkit-scrollbar-track { background: transparent; }
+
+.image-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 140ms, border-color 140ms, transform 100ms;
+  animation: card-in 200ms ease-out both;
+}
+.image-card:hover {
+  background: var(--card-hover);
+  border-color: var(--border-strong);
+}
+.image-card:active { transform: translateY(1px); }
+
+.image-card .card-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  min-width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+.image-card .card-thumb {
+  width: 52px; height: 52px;
+  border-radius: 7px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+  transition: border-color 120ms, box-shadow 120ms, transform 100ms;
+}
+.image-card .card-thumb:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+.image-card .card-thumb:active { transform: scale(0.97); }
+.image-card .card-thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.image-card .card-info {
+  flex: 1;
+  min-width: 0;
+}
+.image-card .card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.image-card .card-id {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Original-vs-AI label comparison (shown once AI results exist) */
+.image-card .label-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.image-card .label-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  min-width: 0;
+  transition: background 120ms, border-color 120ms;
+}
+.image-card .label-row.is-chosen {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+.image-card .label-tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.image-card .label-tag.tag-original {
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--text-muted);
+}
+.image-card .label-tag.tag-ai {
+  background: var(--primary);
+  color: #fff;
+}
+.image-card .label-val {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.image-card .label-row:not(.is-chosen) .label-val {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Per-image AI / Original label toggle - a compact segmented pill that
+   matches the filter tabs / segmented controls used elsewhere. */
+.image-card .label-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: var(--shadow-sm) inset;
+}
+.image-card .label-toggle .lt-opt {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 140ms, color 140ms, box-shadow 140ms;
+  white-space: nowrap;
+}
+.image-card .label-toggle .lt-opt:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.04);
+}
+.image-card .label-toggle .lt-opt.is-active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 1px 4px rgba(36, 102, 235, 0.35);
+}
+
+/* Gallery filter-empty state */
+.no-filter-results {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Footer-style primary button block ───────────────────────────── */
+/* The Images tab uses the same .btn .btn-primary pattern as Sync, but
+   wraps it in a #img-footer so it sticks visually under the gallery. */
+#img-footer { margin-top: 2px; }
+#img-footer .btn { margin-top: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODE STRIP - Form review ↔ Order Photos toggle inside the Sync tab.
+   Visually mirrors .filter-tabs so the segmented-pill pattern is
+   consistent across the panel.
+   ═══════════════════════════════════════════════════════════════════ */
+.mode-strip {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.mode-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  transition: background 140ms, color 140ms, box-shadow 140ms;
+  white-space: nowrap;
+}
+.mode-btn svg { color: currentColor; flex-shrink: 0; }
+.mode-btn:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.04);
+}
+.mode-btn.is-active {
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+
+/* Only the active mode-panel renders; siblings stay collapsed. */
+.mode-panel { display: none; flex-direction: column; gap: 14px; }
+.mode-panel.is-active { display: flex; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   EZ Inspections overrides
+   The EZ flow has a single AI answer per question, so it uses a plain
+   `is-accepted` card state (rather than SmartFill's per-pass
+   accepted-form / accepted-image / accepted-verified). Give it the same
+   green "applied" treatment as the verified state.
+   ═══════════════════════════════════════════════════════════════════ */
+.suggestion.is-accepted {
+  border-left-color: var(--success);
+  background: #f6fefb;
+}
+
+/* Reference-photo thumbnails (AI evidence) shown on a review card. */
+.ref-thumbs { gap: 6px; }
+.ref-thumb {
+  width: 46px; height: 46px;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: zoom-in;
+  transition: border-color 120ms, box-shadow 120ms, transform 100ms;
+}
+.ref-thumb:hover { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.ref-thumb:active { transform: scale(0.97); }
+.ref-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Detection card: clearer separation between the label and the Job Id line. */
+.detection-card .detection-label { margin-bottom: 4px; }
+.detection-card .detection-name { margin-top: 0; line-height: 1.3; }
+
+
+/* ═════════════════════════════════════════════════════════════════
+   SMARTFILL UI 2.0 — modern theme layer
+   Token-driven restyle appended after the legacy rules: every selector
+   here matches an existing component, so the cascade upgrades the look
+   without touching a single class name or ID the JS relies on.
+   Includes: gradient glass header, glow status canvas, gradient CTAs,
+   live badges, dark-mode (prefers-color-scheme) and reduced-motion.
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ── Base ─────────────────────────────────────────────────────── */
+body {
+  background:
+    radial-gradient(1100px 420px at 110% -8%, var(--primary-soft) 0%, transparent 62%),
+    radial-gradient(900px 380px at -18% 108%, var(--primary-soft) 0%, transparent 58%),
+    var(--bg);
+  background-attachment: fixed;
+}
+::selection { background: var(--primary); color: #fff; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Counters and timestamps read better with tabular figures. */
+.filter-count, .image-count, .progress-count, .activity-time,
+.version, .canvas-progress, .queue-summary {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Top bar: brand gradient with glass chip ─────────────────── */
+.top-bar {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 0;
+  background: linear-gradient(118deg, var(--grad-a) 0%, var(--grad-b) 58%, var(--grad-c) 100%);
+}
+.top-bar::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(420px 90px at 18% 0%, rgba(255, 255, 255, 0.18), transparent 70%),
+    radial-gradient(560px 140px at 92% 130%, rgba(255, 255, 255, 0.10), transparent 70%);
+  pointer-events: none;
+}
+.top-bar::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  background-size: 220% 100%;
+  animation: hairline-drift 6s linear infinite;
+  opacity: 0.9;
+}
+@keyframes hairline-drift {
+  from { background-position: 130% 0; }
+  to   { background-position: -130% 0; }
+}
+.brand { position: relative; z-index: 1; }
+.brand h1 { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); }
+.brand-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(4px);
+}
+.brand-chip {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.top-actions { position: relative; z-index: 1; }
+.top-bar .icon-button { color: rgba(255, 255, 255, 0.85); }
+.top-bar .icon-button:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.top-bar .icon-button svg { transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.top-bar .icon-button:hover svg { transform: rotate(-80deg); }
+
+/* ── Nav rail: floating pills + gradient indicator ───────────── */
+.rail { background: transparent; }
+.rail-tab { position: relative; }
+.rail-tab::before {
+  content: '';
+  position: absolute; left: -8px; top: 50%;
+  translate: 0 -50%;
+  width: 3px; height: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+  transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.rail-tab.is-active::before { height: 62%; }
+.rail-tab.is-active {
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card { transition: box-shadow 0.25s ease, border-color 0.25s ease; }
+.card:hover { box-shadow: var(--shadow); }
+.tab-panel.is-active { animation: panel-in 0.28s ease both; }
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Status canvas: glow stage ───────────────────────────────── */
+.canvas {
+  border-radius: 14px;
+  background:
+    radial-gradient(340px 210px at 50% 0%, var(--primary-soft), transparent 72%),
+    var(--canvas-bg);
+}
+.canvas-bg {
+  opacity: 0.8;
+  background-image: radial-gradient(var(--dot) 1.2px, transparent 1.4px);
+  background-size: 16px 16px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 78% at 50% 45%, #000 25%, transparent 78%);
+          mask-image: radial-gradient(ellipse 85% 78% at 50% 45%, #000 25%, transparent 78%);
+}
+.ring-track { stroke: var(--ring-track); }
+.ring-progress { stroke: url(#ring-grad); filter: drop-shadow(0 0 6px var(--glow)); }
+.ring-stop-a { stop-color: var(--primary); }
+.ring-stop-b { stop-color: var(--accent); }
+.ring-icon { animation: icon-breathe 3.2s ease-in-out infinite; }
+@keyframes icon-breathe {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.07); opacity: 0.85; }
+}
+.canvas-title { font-size: 17px; font-weight: 700; }
+.canvas-progress {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+}
+
+/* ── Primary buttons: gradient + hover sheen ─────────────────── */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--grad-c) 100%);
+  box-shadow: 0 6px 18px var(--glow);
+  transition: background 140ms, transform 140ms, box-shadow 200ms, color 140ms;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -60%;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--grad-c) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px var(--glow);
+}
+.btn-primary:hover::before { left: 120%; }
+.btn-primary:active { transform: translateY(0); box-shadow: 0 4px 12px var(--glow); }
+.btn-primary:disabled {
+  background: var(--text-faint);
+  box-shadow: none;
+  transform: none;
+}
+.btn-primary:disabled::before { display: none; }
+
+.btn-ghost { background: var(--primary); }
+.btn-ghost:hover { background: var(--primary-hover); }
+
+/* AI-suggestion apply button follows the review accent, not a fixed hue. */
+.action-apply-image { background: var(--purple-strong); }
+.action-apply-image:hover { background: var(--purple-strong); filter: brightness(1.12); }
+
+/* ── Badges: live status dot ─────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+}
+.badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+.badge-progress::before { animation: dot-pulse 1.1s ease-in-out infinite; }
+@keyframes dot-pulse {
+  50% { opacity: 0.25; transform: scale(0.8); }
+}
+
+/* ── Segmented controls: active state picks up the brand ─────── */
+.filter-tab.is-active,
+.sort-btn.is-active { color: var(--primary); }
+
+/* ── Suggestion cards: hover lift + entrance stagger ─────────── */
+.suggestion:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.suggestion-list .suggestion:nth-child(1) { animation-delay: 0.03s; }
+.suggestion-list .suggestion:nth-child(2) { animation-delay: 0.07s; }
+.suggestion-list .suggestion:nth-child(3) { animation-delay: 0.11s; }
+.suggestion-list .suggestion:nth-child(4) { animation-delay: 0.15s; }
+.suggestion-list .suggestion:nth-child(5) { animation-delay: 0.19s; }
+.suggestion-list .suggestion:nth-child(6) { animation-delay: 0.23s; }
+
+/* Answer-block borders come from the theme tokens. */
+.answer-block--form     { border-color: var(--form-border); }
+.answer-block--image    { border-color: var(--image-border); }
+.answer-block--verified { border-color: var(--verified-border); }
+
+/* ── Progress bar: brand gradient ────────────────────────────── */
+.progress-fill { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* ── Empty states ────────────────────────────────────────────── */
+.empty-icon { background: var(--primary-soft); color: var(--primary); }
+
+/* ── Footer: connection pulse ────────────────────────────────── */
+.conn-dot.is-online { animation: conn-pulse 2.4s ease-out infinite; }
+@keyframes conn-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); }
+  70%  { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ── Toast: glassy, accent-edged ─────────────────────────────── */
+.toast {
+  background: rgba(18, 20, 40, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid var(--accent);
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────── */
+.main::-webkit-scrollbar-thumb,
+.suggestion-list::-webkit-scrollbar-thumb,
+.activity-list::-webkit-scrollbar-thumb,
+.image-gallery::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.main::-webkit-scrollbar-thumb:hover { background-color: var(--text-faint); }
+
+/* ═════════════════════════════════════════════════════════════════
+   DARK MODE — follows the OS / browser theme automatically.
+   Token overrides carry most of it; the explicit selectors below fix
+   values that were hard-coded for light backgrounds in the legacy CSS.
+   ═════════════════════════════════════════════════════════════════ */
+  :root[data-theme="dark"] {
+    --bg:           #0c0e1a;
+    --card:         #151829;
+    --card-hover:   #1a1e33;
+    --canvas-bg:    #111427;
+
+    --border:        #262b47;
+    --border-strong: #343b61;
+
+    --text:        #eceef8;
+    --text-muted:  #9aa1c0;
+    --text-faint:  #676e91;
+
+    --success-soft: rgba(16, 185, 129, 0.15);
+    --warning-soft: rgba(245, 158, 11, 0.15);
+    --danger-soft:  rgba(239, 68, 68, 0.15);
+
+    --verified-border: rgba(52, 211, 153, 0.28);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow:    0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+  }
+
+
+  /* Config tints are stored as light hexes; in dark mode these later
+     rules win the cascade so the blocks use fixed translucent tints
+     instead (the color config still applies in light mode). */
+  :root[data-theme="dark"] .answer-block--current { background: rgba(148, 163, 184, 0.09); }
+
+  :root[data-theme="dark"] .answer-block--form { background: rgba(129, 140, 248, 0.12); }
+
+  :root[data-theme="dark"] .answer-block--image { background: var(--purple-soft); }
+
+  :root[data-theme="dark"] .answer-block--verified { background: rgba(16, 185, 129, 0.10); }
+
+
+  /* Post-action card washes (hard-coded near-white in the legacy CSS). */
+  :root[data-theme="dark"] .suggestion.is-accepted,
+:root[data-theme="dark"] .suggestion.is-accepted-form,
+:root[data-theme="dark"] .suggestion.is-accepted-image,
+:root[data-theme="dark"] .suggestion.is-accepted-verified { background: var(--card); }
+
+  :root[data-theme="dark"] .suggestion.is-rejected { background: rgba(148, 163, 184, 0.06); }
+
+
+  /* Legacy prev/next answer cells. */
+  :root[data-theme="dark"] .answer-cell.is-prev { color: #f87171; background: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.28); }
+
+  :root[data-theme="dark"] .answer-cell.is-next { color: #34d399; background: rgba(16, 185, 129, 0.10); border-color: rgba(16, 185, 129, 0.28); }
+
+
+  /* Semantic text tuned for dark surfaces. */
+  :root[data-theme="dark"] .badge-success { color: #34d399; }
+
+  :root[data-theme="dark"] .badge-error { color: #f87171; }
+
+  :root[data-theme="dark"] .badge-warning { color: #fbbf24; }
+
+  :root[data-theme="dark"] .photodates-flag.is-ok { color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+
+  :root[data-theme="dark"] .photodates-flag.is-warn { color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+
+  :root[data-theme="dark"] .stale-thumb-ph { background: var(--card); }
+
+  :root[data-theme="dark"] .stale-thumb-date { color: #f87171; }
+
+  :root[data-theme="dark"] .matched-row { background: rgba(16, 185, 129, 0.10); border-color: rgba(16, 185, 129, 0.25); }
+
+  :root[data-theme="dark"] .matched-icon { background: rgba(16, 185, 129, 0.18); }
+
+  :root[data-theme="dark"] .matched-title { color: #34d399; }
+
+  :root[data-theme="dark"] .suggestion-status.is-accepted,
+:root[data-theme="dark"] .suggestion-status.is-matched { color: #34d399; }
+
+  :root[data-theme="dark"] .suggestion-status.is-pending { color: var(--purple-text); }
+
+  :root[data-theme="dark"] .answer-block--verified .answer-block-head { color: #34d399; }
+
+  :root[data-theme="dark"] .answer-block--image .answer-block-head { color: var(--purple-text); }
+
+  :root[data-theme="dark"] .applied-banner.banner-success { color: #34d399; }
+
+  :root[data-theme="dark"] .activity-item.is-success .activity-message { color: #34d399; }
+
+  :root[data-theme="dark"] .activity-item.is-error   .activity-message { color: #f87171; }
+
+  :root[data-theme="dark"] .conflict-header { color: var(--purple-text); }
+
+  :root[data-theme="dark"] #btn-accept-all { color: #34d399; }
+
+  :root[data-theme="dark"] #btn-accept-all:hover { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+
+  :root[data-theme="dark"] .supported-form-match { color: #34d399; }
+
+  :root[data-theme="dark"] .supported-group-tag.tag-here { color: #34d399; }
+
+  :root[data-theme="dark"] .supported-group-tag.tag-other { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
+
+
+  /* Hover washes that were rgba(15,23,42,…) on light. */
+  :root[data-theme="dark"] .filter-tab:hover:not(.is-active),
+:root[data-theme="dark"] .sort-btn:hover:not(.is-active):not(.is-disabled),
+:root[data-theme="dark"] .mode-btn:hover:not(.is-active),
+:root[data-theme="dark"] .image-card .label-toggle .lt-opt:hover:not(.is-active) { background: rgba(255, 255, 255, 0.06); }
+
+  :root[data-theme="dark"] .filter-count { background: rgba(255, 255, 255, 0.08); }
+
+  :root[data-theme="dark"] .image-card .label-tag.tag-original { background: rgba(255, 255, 255, 0.09); color: var(--text-muted); }
+
+  :root[data-theme="dark"] .action-reject { background: rgba(255, 255, 255, 0.05); }
+
+  :root[data-theme="dark"] .action-reject:hover { background: rgba(255, 255, 255, 0.10); color: var(--text); }
+
+  :root[data-theme="dark"] .source-photo-link:hover { background: var(--primary-soft); border-color: var(--primary); }
+
+  :root[data-theme="dark"] .btn-text:hover { background: rgba(255, 255, 255, 0.06); }
+
+
+  /* Skeletons + toast flip contrast. */
+  :root[data-theme="dark"] .skeleton {
+    background: linear-gradient(90deg, #1d2242 0%, #272d55 50%, #1d2242 100%);
+    background-size: 200% 100%;
+  }
+
+  :root[data-theme="dark"] .toast {
+    background: rgba(236, 238, 248, 0.96);
+    color: #14162e;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-left: 3px solid var(--primary);
+  }
+
+/* ── Accessibility: honor reduced-motion preferences ─────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   SMARTFILL UI 2.0 — THEME TOGGLE (light default, dark opt-in)
+   Light is the default theme. Dark mode is turned on from
+   Config → Appearance, which sets data-theme="dark" on <html>.
+   All dark token + component overrides earlier in this file are scoped
+   to :root[data-theme="dark"], so the OS colour scheme is never used.
+   ═════════════════════════════════════════════════════════════════ */
+:root                       { color-scheme: light; }
+:root[data-theme="dark"]    { color-scheme: dark; }
+
+/* ── Light-edition flourishes (light theme only) ─────────────────
+   Aurora drift behind the status ring + brand-tinted card hovers.
+   Scoped with :not([data-theme="dark"]) so they never touch dark mode. */
+:root:not([data-theme="dark"]) .canvas::after {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    var(--primary-soft) 70deg,
+    transparent 150deg,
+    var(--purple-soft) 230deg,
+    transparent 320deg);
+  animation: aurora-spin 22s linear infinite;
+  opacity: 0.6;
+  pointer-events: none;
+}
+@keyframes aurora-spin { to { transform: rotate(360deg); } }
+
+/* Brand-tinted hover borders make the paper-white cards feel alive. */
+:root:not([data-theme="dark"]) .card:hover { border-color: color-mix(in srgb, var(--primary) 22%, var(--border)); }
+:root:not([data-theme="dark"]) .suggestion:hover,
+:root:not([data-theme="dark"]) .image-card:hover { border-color: color-mix(in srgb, var(--primary) 32%, var(--border)); }
+:root:not([data-theme="dark"]) .icon-button-sm:hover { box-shadow: 0 0 0 3px var(--primary-soft); }

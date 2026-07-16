@@ -1,0 +1,9 @@
+# Ignore Markdown files, except the README and any CONTEXT files (kept in the
+# repo for future reference).
+*.md
+!README.md
+!CONTEXT.md
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db

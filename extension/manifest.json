@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Fill - EZ & Inspector ADE",
+  "version": "0.1.0",
+  "description": "Scrapes inspection Q&A + labeled photos on EZ Inspections and Inspector ADE, verifies answers with AI, and highlights matches/mismatches.",
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage", "unlimitedStorage", "tabs"],
+  "host_permissions": [
+    "https://www.ezinspections.com/*",
+    "https://ezinspections.com/*",
+    "https://www.inspectorade.com/*",
+    "https://inspectorade.com/*",
+    "https://archive.inspectorade.com/*",
+    "http://101.53.137.140/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Smart Fill"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.ezinspections.com/inspManager/*",
+        "https://ezinspections.com/inspManager/*"
+      ],
+      "js": ["imageModal.js", "content-ez.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.inspectorade.com/*",
+        "https://inspectorade.com/*"
+      ],
+      "js": ["imageModal.js", "content-ia.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
