@@ -32,10 +32,10 @@ dark themes, and the on-page image viewer all work on both platforms.
 Both platforms POST to the **same** endpoint pair. The backend tells them
 apart by a `platform` field:
 
-- Verify (`POST /ia/test/describe`, multipart): the `payload` JSON is
+- Verify (`POST /ia/describe`, multipart): the `payload` JSON is
   `{ platform: "EZ" | "IA", jobId, work_code, sections, photos }` plus the
   binary `images` files named `<photoId>.<ext>`.
-- Feedback (`POST /ia/test/feedback`, JSON):
+- Feedback (`POST /ia/feedback`, JSON):
   `{ platform: "EZ" | "IA", result_id, jobId, feedback: [...] }`.
 
 Everything else in the contract is unchanged from the standalone extensions.

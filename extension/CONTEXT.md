@@ -34,10 +34,10 @@ future reference.
 Both platforms POST to a single shared endpoint pair; the backend tells them
 apart by a `platform` field with value `"EZ"` or `"IA"`:
 
-- Verify `POST http://101.53.137.140/ia/test/describe` (multipart):
+- Verify `POST http://101.53.137.140/ia/describe` (multipart):
   `payload` JSON is `{ platform, jobId, work_code, sections, photos }` +
   `images` files named `<photoId>.<ext>`.
-- Feedback `POST http://101.53.137.140/ia/test/feedback` (JSON):
+- Feedback `POST http://101.53.137.140/ia/feedback` (JSON):
   `{ platform, result_id, jobId, feedback:[...] }`.
 
 The rest of the contract is identical to the standalone extensions. URLs are
@@ -100,7 +100,7 @@ masked + read-only in Config.
 ## What might be asked next
 
 - Point VERIFY_URL / FEEDBACK_URL at the production unified backend once it
-  exists (they currently target the /ia/test/* endpoints on the shared host).
+  exists (they currently target the /ia/* endpoints on the shared host).
 - Port future fixes from the standalone EZ/IA extensions into the copies
   here (and vice versa).
 - Possibly retire the standalone extensions once this build is proven.

@@ -97,8 +97,8 @@ const els = {
 // BOTH platforms POST to the same pair - the backend tells EZ and IA apart by
 // the "platform" field in the payload. The Config tab only DISPLAYS them
 // (masked), it cannot change them.
-const VERIFY_URL = 'http://101.53.137.140/ia/test/describe';
-const FEEDBACK_URL = 'http://101.53.137.140/ia/test/feedback';
+const VERIFY_URL = 'http://101.53.137.140/ia/describe';
+const FEEDBACK_URL = 'http://101.53.137.140/ia/feedback';
 const COLOR_DEFAULTS = { current: '#f6f7fb', image: '#fbe9fe' };
 const COLOR_VARS = { current: '--cfg-current-bg', image: '--cfg-image-bg' };
 const STORAGE_KEY = 'sfVerifierConfig';
