@@ -997,6 +997,14 @@ h1, h2, h3 { font-weight: 600; letter-spacing: -0.2px; }
   line-height: 1.4;
   margin-top: 1px;
 }
+/* A match the operator rejected: same compact row, drained of the green. */
+.matched-row.is-rejected {
+  background: var(--bg);
+  border-color: var(--border);
+}
+.matched-row.is-rejected .matched-icon { color: var(--text-muted); }
+.matched-row.is-rejected .matched-title { color: var(--text-muted); }
+.matched-row.is-rejected .matched-value { color: var(--text-muted); }
 
 /* References row - groups source-photos and source-labels under the
    answer blocks. Each child keeps its existing pill / link treatment. */
@@ -2188,6 +2196,12 @@ body {
   :root[data-theme="dark"] .matched-icon { background: rgba(16, 185, 129, 0.18); }
 
   :root[data-theme="dark"] .matched-title { color: #34d399; }
+
+  :root[data-theme="dark"] .matched-row.is-rejected { background: rgba(255, 255, 255, 0.05); border-color: var(--border); }
+
+  :root[data-theme="dark"] .matched-row.is-rejected .matched-icon { background: rgba(255, 255, 255, 0.08); color: var(--text-muted); }
+
+  :root[data-theme="dark"] .matched-row.is-rejected .matched-title { color: var(--text-muted); }
 
   :root[data-theme="dark"] .suggestion-status.is-accepted,
 :root[data-theme="dark"] .suggestion-status.is-matched { color: #34d399; }

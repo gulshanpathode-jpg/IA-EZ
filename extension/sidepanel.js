@@ -1313,10 +1313,19 @@ function updateCounts() {
   els.countRejected.textContent = state.entries.filter((e) => e.status === 'rejected').length;
 }
 
+// Undecided = still awaiting an operator call, which now includes matches.
+// Bulk actions work on what the active filter is showing, so "Accept all" on
+// the Matched tab confirms the matches and nothing else.
+function undecidedInView() {
+  return applyFilter(state.entries).filter(
+    (e) => e.status === 'pending' || e.status === 'matched'
+  );
+}
+
 function updateBulkBar() {
-  const anyPending = state.entries.some((e) => e.status === 'pending');
-  els.btnAcceptAll.disabled = !anyPending;
-  els.btnRejectAll.disabled = !anyPending;
+  const any = undecidedInView().length > 0;
+  els.btnAcceptAll.disabled = !any;
+  els.btnRejectAll.disabled = !any;
 }
 
 document.querySelectorAll('.filter-tab').forEach((tab) => {
@@ -1396,7 +1405,11 @@ function renderHead(entry) {
     rejected: { label: 'Rejected', cls: 'is-rejected' },
     matched: { label: 'Matches', cls: 'is-matched' },
   };
-  const m = map[entry.status] || map.pending;
+  let m = map[entry.status] || map.pending;
+  // A decided match reads as "Confirmed", not "Applied" - nothing was written.
+  if (entry.matchesCurrent && entry.status === 'accepted') {
+    m = { label: 'Confirmed', cls: 'is-matched' };
+  }
   return `
     <div class="suggestion-head">
       <div style="min-width:0;flex:1;">
@@ -1410,25 +1423,31 @@ function renderHead(entry) {
 function renderBanner(entry) {
   if (entry.status === 'accepted') {
     return `<div class="applied-banner banner-success">
-      ${iconCheck()} Applied - the AI answer was written into the page.
+      ${iconCheck()} ${entry.matchesCurrent
+        ? 'Confirmed - the AI answer matches the page answer.'
+        : 'Applied - the AI answer was written into the page.'}
     </div>`;
   }
   if (entry.status === 'rejected') {
     return `<div class="applied-banner banner-muted">
-      ${iconX()} Rejected - the current page answer was kept.
+      ${iconX()} ${entry.matchesCurrent
+        ? 'Rejected - flagged as wrong even though it matches the page.'
+        : 'Rejected - the current page answer was kept.'}
     </div>`;
   }
   return '';
 }
 
 function renderBody(entry) {
-  // Matched → compact single-line row.
-  if (entry.status === 'matched') {
+  // Matched → compact single-line row, in every status (a match stays a match
+  // whether it is undecided, confirmed, or rejected; only the banner changes).
+  if (entry.matchesCurrent) {
+    const title = entry.status === 'rejected' ? 'Matched but rejected' : 'Already correct';
     return `
-      <div class="matched-row">
-        <span class="matched-icon">${iconCheck()}</span>
+      <div class="matched-row${entry.status === 'rejected' ? ' is-rejected' : ''}">
+        <span class="matched-icon">${entry.status === 'rejected' ? iconX() : iconCheck()}</span>
         <div class="matched-text">
-          <div class="matched-title">Already correct</div>
+          <div class="matched-title">${title}</div>
           <div class="matched-value">${escapeHtml(formatAnswer(entry.aiAnswer))}</div>
         </div>
       </div>`;
@@ -1534,7 +1553,17 @@ function renderReferences(entry) {
 }
 
 function renderActions(entry) {
-  if (entry.status === 'matched') return '';
+  // Matched cards are decidable too: the operator confirms the AI agreed with
+  // the page for the right reason, or rejects it as wrong-but-coincidentally-
+  // equal. Neither writes to the page (the value is already there); the point
+  // is to capture the judgement in feedback.
+  if (entry.status === 'matched') {
+    return `
+      <div class="suggestion-actions">
+        <button class="action-btn action-reject" data-act="reject" data-uid="${escapeHtml(entry.uid)}">Reject</button>
+        <button class="action-btn action-accept" data-act="accept" data-uid="${escapeHtml(entry.uid)}">Accept</button>
+      </div>`;
+  }
   if (entry.status === 'pending') {
     return `
       <div class="suggestion-actions">
@@ -1620,6 +1649,14 @@ async function applyToPage(fieldKey, value) {
 async function acceptEntry(uid) {
   const entry = findEntry(uid);
   if (!entry) return;
+  // A matched entry already holds the AI answer - accepting it records the
+  // operator's confirmation, it does not touch the page.
+  if (entry.matchesCurrent) {
+    entry.status = 'accepted';
+    renderQueue();
+    logActivity(`Confirmed match: ${truncate(entry.question.text, 50)}`, 'success');
+    return;
+  }
   try {
     await applyToPage(entry.uid, entry.aiAnswer);
     entry.question.currentAnswer = entry.aiAnswer;
@@ -1637,7 +1674,11 @@ function rejectEntry(uid) {
   if (!entry) return;
   entry.status = 'rejected';
   renderQueue();
-  logActivity(`Rejected: ${truncate(entry.question.text, 50)}`);
+  logActivity(
+    entry.matchesCurrent
+      ? `Rejected match: ${truncate(entry.question.text, 50)}`
+      : `Rejected: ${truncate(entry.question.text, 50)}`
+  );
 }
 
 async function reconsiderEntry(uid) {
@@ -1657,8 +1698,9 @@ async function reconsiderEntry(uid) {
 }
 
 els.btnAcceptAll.addEventListener('click', async () => {
-  const pending = state.entries.filter((e) => e.status === 'pending');
-  for (const entry of pending) {
+  const targets = undecidedInView();
+  for (const entry of targets) {
+    if (entry.matchesCurrent) { entry.status = 'accepted'; continue; } // nothing to write
     try {
       await applyToPage(entry.uid, entry.aiAnswer);
       entry.question.currentAnswer = entry.aiAnswer;
@@ -1668,14 +1710,14 @@ els.btnAcceptAll.addEventListener('click', async () => {
     }
   }
   renderQueue();
-  logActivity(`Accepted all (${pending.length})`, 'success');
+  logActivity(`Accepted all (${targets.length})`, 'success');
 });
 
 els.btnRejectAll.addEventListener('click', () => {
-  const pending = state.entries.filter((e) => e.status === 'pending');
-  pending.forEach((e) => (e.status = 'rejected'));
+  const targets = undecidedInView();
+  targets.forEach((e) => (e.status = 'rejected'));
   renderQueue();
-  logActivity(`Rejected all (${pending.length})`);
+  logActivity(`Rejected all (${targets.length})`);
 });
 
 // ── Feedback ─────────────────────────────────────────────────────────
@@ -1718,7 +1760,11 @@ function buildFeedbackBody(rec) {
       question: e.question.text,
       currentAnswer: e.originalAnswer,
       aiAnswer: e.aiAnswer,
+      // 'matched' = the AI agreed with the page and the operator left it alone.
+      // 'accept' / 'reject' = an explicit operator decision; `matched` says
+      // whether that decision was made on an agreeing or a differing answer.
       decision: e.status === 'accepted' ? 'accept' : e.status === 'rejected' ? 'reject' : 'matched',
+      matched: !!e.matchesCurrent,
       finalAnswer: e.question.currentAnswer,
     }));
   return {
