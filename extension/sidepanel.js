@@ -1746,33 +1746,49 @@ function activeRecord() {
   return state.pipelinePageKey ? state.resultsByJob[state.pipelinePageKey] : null;
 }
 
+// Entry status → the `decision` value the backend sees.
+//   accept / reject - an explicit operator call.
+//   matched         - the AI agreed with the page and the operator left it alone.
+//   pending         - the AI disagreed and the operator never ruled on it.
+// `matched` (the boolean) is independent: it says whether the AI answer equalled
+// the page answer, whatever the operator then did about it.
+const DECISION_FOR_STATUS = {
+  accepted: 'accept',
+  rejected: 'reject',
+  matched: 'matched',
+  pending: 'pending',
+};
+
 // Build the feedback body for one job record, or null if it has no Accept/Reject
-// decisions to report.
+// decisions to report. Every entry of a reported job is included - an unreviewed
+// question is sent as 'pending' rather than omitted, so the backend can tell a
+// skipped conflict from a question that was never asked.
 function buildFeedbackBody(rec) {
   if (!rec) return null;
   const entries = rec.entries || [];
   if (!entries.some((e) => e.status === 'accepted' || e.status === 'rejected')) return null;
-  const feedback = entries
-    .filter((e) => e.status === 'accepted' || e.status === 'rejected' || e.status === 'matched')
-    .map((e) => ({
-      questionId: e.uid,
-      section: e.sectionText,
-      question: e.question.text,
-      currentAnswer: e.originalAnswer,
-      aiAnswer: e.aiAnswer,
-      // 'matched' = the AI agreed with the page and the operator left it alone.
-      // 'accept' / 'reject' = an explicit operator decision; `matched` says
-      // whether that decision was made on an agreeing or a differing answer.
-      decision: e.status === 'accepted' ? 'accept' : e.status === 'rejected' ? 'reject' : 'matched',
-      matched: !!e.matchesCurrent,
-      finalAnswer: e.question.currentAnswer,
-    }));
+  const feedback = entries.map((e) => ({
+    questionId: e.uid,
+    section: e.sectionText,
+    question: e.question.text,
+    currentAnswer: e.originalAnswer,
+    aiAnswer: e.aiAnswer,
+    decision: DECISION_FOR_STATUS[e.status] || 'pending',
+    matched: !!e.matchesCurrent,
+    finalAnswer: e.question.currentAnswer,
+  }));
   return {
     platform: rec.platform || 'EZ', // same tag the verify payload carries
     result_id: rec.resultId || '',
     jobId: rec.jobId || null,
     feedback,
   };
+}
+
+// How many of the reported rows are actual operator calls - the payload also
+// carries the matched and pending ones, which nobody "decided".
+function decidedCount(body) {
+  return body.feedback.filter((f) => f.decision === 'accept' || f.decision === 'reject').length;
 }
 
 // Manual send (button). Sends once, then greys out for this job.
@@ -1797,8 +1813,8 @@ async function sendFeedback() {
     schedulePersist(); // remember that feedback was sent for this job
     setFeedbackButton('Feedback sent', true);
     setConnection('online', 'Online');
-    showToast(`Feedback sent (${body.feedback.length})`);
-    logActivity(`Feedback sent: ${body.feedback.length} decisions`, 'success');
+    showToast(`Feedback sent (${decidedCount(body)})`);
+    logActivity(`Feedback sent: ${decidedCount(body)} decisions of ${body.feedback.length}`, 'success');
   } catch (e) {
     setConnection('error', 'Feedback error');
     showToast('Feedback failed: ' + e.message);
@@ -1831,7 +1847,7 @@ function autoSendFeedback(rec, viaBeacon) {
     body: JSON.stringify(body),
     keepalive: true,
   })
-    .then(() => logActivity(`Feedback auto-sent: ${body.feedback.length} decisions`, 'success'))
+    .then(() => logActivity(`Feedback auto-sent: ${decidedCount(body)} decisions of ${body.feedback.length}`, 'success'))
     .catch((e) => logActivity('Auto-feedback failed: ' + e.message, 'error'));
 }
 
