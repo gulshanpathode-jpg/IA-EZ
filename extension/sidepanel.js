@@ -303,6 +303,10 @@ async function detect() {
   }
 
   renderDetection();
+
+  // Warm the photo cache in the background so clicking Sync skips the photo
+  // phase. Runs once per job (TTL-guarded); best-effort, never blocks detect.
+  if (state.detection.supported) schedulePrefetch(state.detection, tab);
 }
 
 function renderDetection() {
@@ -794,27 +798,196 @@ async function resolveSourceUrl(photo) {
   }
 }
 
-// Fetch one photo into a Blob: real full-size URL first, then the (lazily
-// generated, often missing) guessed full-res URL, then the thumbnail.
-async function fetchImageBlob(photo, useFullRes) {
-  const candidates = useFullRes
-    ? [await resolveSourceUrl(photo), photo.fullResUrl, photo.thumbnailUrl]
-    : [photo.thumbnailUrl, photo.fullResUrl];
-
-  for (const url of candidates) {
+// Try each candidate URL in order; return the first that yields a real image.
+// An expired session or an error page is HTML, not an image - skip it rather
+// than uploading a login page as if it were a photo.
+async function firstImageBlob(urls) {
+  for (const url of urls) {
     if (!url) continue;
     try {
       const resp = await fetch(url, { credentials: 'include' });
       if (!resp.ok) continue;
       const blob = await resp.blob();
-      // An expired session or an error page is HTML, not an image - skip it
-      // rather than uploading a login page as if it were a photo.
       if (blob.size > 0 && /^image\//.test(blob.type)) return { blob, url };
     } catch (e) {
       // try next candidate
     }
   }
   return null;
+}
+
+// Fetch one photo into a Blob.
+//
+// For full-res we try the GUESSED full-size URL (thumbnail path with
+// "/thumbnail" stripped) FIRST. Measured against live jobs, that file already
+// exists for photos that have been generated - one request returns the true
+// full-size image, identical bytes to the viewer flow. Only when the guess
+// genuinely fails (404 / non-image, i.e. EZ hasn't generated the file yet) do
+// we fall back to the slow viewer flow: resolveSourceUrl() drives
+// JobPictureViewer.aspx, which both GENERATES the file and returns its real
+// downloadUtil.aspx URL. That fallback is two round-trips; the guess-first path
+// is one, so the common case is ~2-3x faster per photo. Thumbnail is the last
+// resort either way.
+async function fetchImageBlob(photo, useFullRes) {
+  if (!useFullRes) {
+    return firstImageBlob([photo.thumbnailUrl, photo.fullResUrl]);
+  }
+  const direct = await firstImageBlob([photo.fullResUrl]);
+  if (direct) return direct;
+  // Guess missing → drive the viewer to generate + locate the real file.
+  const viaViewer = await resolveSourceUrl(photo);
+  return firstImageBlob([viaViewer, photo.thumbnailUrl]);
+}
+
+// Fetch full image blobs for a photo list, using the platform's strategy.
+//   EZ: fetched from the panel with a 5-way concurrency pool (guess-first
+//       full-res, viewer fallback - see fetchImageBlob).
+//   IA: delegated to the PAGE origin (FETCH_IMAGES → data URLs) so the
+//       SameSite session cookie rides along.
+// Returns { images: { <attid>: { blob, displayUrl, ext } }, thumbCount }.
+// `displayUrl` renders directly in the panel/viewer (object URL for EZ, data
+// URL for IA). onProgress(done, total) is optional. Never throws - a photo
+// that fails to load is simply absent from `images`.
+async function fetchImagesForPhotos({ photos, platform, fullRes, tab, onProgress }) {
+  const images = {};
+  const total = photos.length;
+  let thumbCount = 0;
+
+  if (platform === 'IA') {
+    const items = photos.map((p) => ({
+      id: p.attid,
+      fullResUrl: p.fullResUrl,
+      thumbnailUrl: p.thumbnailUrl,
+    }));
+    let fetched = [];
+    if (total) {
+      try {
+        const imgRes = await messageTab(tab, { type: 'FETCH_IMAGES', items, preferFullRes: fullRes });
+        fetched = (imgRes && imgRes.images) || [];
+      } catch (e) {
+        // leave images empty; the caller surfaces the miss in its summary
+      }
+    }
+    for (const r of fetched) {
+      if (!r || !r.dataUrl || !r.id) continue;
+      const blob = await (await fetch(r.dataUrl)).blob();
+      images[r.id] = { blob, displayUrl: r.dataUrl, ext: 'jpg' };
+    }
+    if (onProgress) onProgress(total, total);
+    return { images, thumbCount };
+  }
+
+  // EZ
+  let done = 0;
+  const fetchOne = async (photo) => {
+    const got = await fetchImageBlob(photo, fullRes);
+    const id = photo.attid;
+    if (got && id) {
+      const ext = (photo.filename && photo.filename.split('.').pop()) || 'jpg';
+      images[id] = { blob: got.blob, displayUrl: URL.createObjectURL(got.blob), ext };
+      if (got.url === photo.thumbnailUrl) thumbCount++;
+    }
+    done++;
+    if (onProgress) onProgress(done, total);
+  };
+  const PHOTO_CONCURRENCY = 5;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < photos.length) await fetchOne(photos[cursor++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(PHOTO_CONCURRENCY, total) }, worker));
+  return { images, thumbCount };
+}
+
+// ── Prefetch (in-memory) ─────────────────────────────────────────────
+// When a job is detected we fetch its full-res photos in the background and
+// stash the blobs by job key, so clicking Sync skips straight past the photo
+// phase. Best-effort only: if a prefetch is missing, partial, or failed, the
+// pipeline (ensureImages) fetches whatever's missing normally - so prefetch can
+// never break or slow a sync, only speed it up. Not persisted (in-memory).
+const prefetchCache = {}; // pageKey → { platform, ts, promise, images, thumbCount }
+const PREFETCH_TTL_MS = 5 * 60 * 1000; // a stale prefetch is re-run, not reused
+const PREFETCH_MAX = 4;                // distinct jobs held at once
+
+function revokePrefetchImages(images) {
+  if (!images) return;
+  for (const im of Object.values(images)) {
+    if (im && typeof im.displayUrl === 'string' && im.displayUrl.startsWith('blob:')) {
+      try { URL.revokeObjectURL(im.displayUrl); } catch (e) { /* ignore */ }
+    }
+  }
+}
+
+// Free object URLs for the oldest prefetches once we exceed the cap.
+function evictOldPrefetch() {
+  const keys = Object.keys(prefetchCache).sort((a, b) => prefetchCache[a].ts - prefetchCache[b].ts);
+  while (keys.length > PREFETCH_MAX) {
+    const k = keys.shift();
+    revokePrefetchImages(prefetchCache[k].images);
+    delete prefetchCache[k];
+  }
+}
+
+// Kick off a background full-res fetch for a detected job (once per job/TTL).
+function schedulePrefetch(d, tab) {
+  const key = pageKeyFor(d);
+  if (!key || !tab || !d || !d.supported) return;
+  const existing = prefetchCache[key];
+  if (existing && Date.now() - existing.ts < PREFETCH_TTL_MS) return; // already in flight / fresh
+  if (existing) revokePrefetchImages(existing.images); // stale re-run: free the old blobs first
+
+  const entry = { platform: d.platform || 'EZ', ts: Date.now(), images: {}, thumbCount: 0, promise: null };
+  prefetchCache[key] = entry;
+  const t0 = Date.now();
+  entry.promise = (async () => {
+    try {
+      const sres = await messageTab(tab, { type: 'SCRAPE' });
+      const photos = (sres && sres.ok && sres.data && sres.data.photos) || [];
+      if (!photos.length) return;
+      const { images, thumbCount } = await fetchImagesForPhotos({
+        photos, platform: entry.platform, fullRes: state.config.fullRes, tab,
+      });
+      entry.images = images;
+      entry.thumbCount = thumbCount;
+      logActivity(
+        `Prefetched ${Object.keys(images).length}/${photos.length} photos (${entry.platform}) - ${Date.now() - t0} ms`,
+      );
+    } catch (e) {
+      // best-effort; Sync will fetch normally
+    }
+  })();
+  evictOldPrefetch();
+}
+
+// Resolve every photo's image blob for a sync: consume a matching prefetch if
+// present (its blob-URL ownership transfers to the caller), then fetch any
+// photos the prefetch didn't cover. Guarantees no photo is silently dropped.
+async function ensureImages({ pageKey, photos, platform, fullRes, tab, onProgress }) {
+  let images = {};
+  let thumbCount = 0;
+
+  const cached = prefetchCache[pageKey];
+  if (cached && Date.now() - cached.ts < PREFETCH_TTL_MS) {
+    try { await cached.promise; } catch (e) { /* fall through to a fresh fetch */ }
+    images = { ...(cached.images || {}) };
+    thumbCount = cached.thumbCount || 0;
+    delete prefetchCache[pageKey]; // consumed: don't revoke, ownership moves to the caller
+  }
+
+  const missing = photos.filter((p) => !images[p.attid]);
+  if (missing.length) {
+    const covered = photos.length - missing.length;
+    const fresh = await fetchImagesForPhotos({
+      photos: missing, platform, fullRes, tab,
+      onProgress: onProgress ? (d) => onProgress(covered + d, photos.length) : null,
+    });
+    Object.assign(images, fresh.images);
+    thumbCount += fresh.thumbCount;
+  } else if (onProgress) {
+    onProgress(photos.length, photos.length); // everything came from prefetch
+  }
+
+  return { images, thumbCount };
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -920,12 +1093,13 @@ async function startPipeline() {
 
   try {
     // 1. Scrape
+    const tScrape0 = Date.now();
     const sres = await sendToTab({ type: 'SCRAPE' });
     if (!sres || !sres.ok) throw new Error('Scrape failed - is this an inspection page?');
     state.scraped = sres.data;
     const qCount = state.scraped.sections.reduce((n, s) => n + s.questions.length, 0);
     if (qCount === 0) throw new Error('No questions found on this page.');
-    logActivity(`Scraped ${qCount} questions, ${state.scraped.photos.length} photos`);
+    logActivity(`Scraped ${qCount} questions, ${state.scraped.photos.length} photos - ${Date.now() - tScrape0} ms`);
 
     // 2. Fetch photo blobs
     state.pipeline = 'uploading';
@@ -952,101 +1126,50 @@ async function startPipeline() {
     const photosList = state.scraped.photos;
     const total = photosList.length;
 
-    if (state.pipelinePlatform === 'IA') {
-      // IA: fetch the photos in the PAGE origin (via the content script), not
-      // from the panel. inspectorade.com photos sit behind a SameSite session
-      // cookie that isn't sent on the panel's cross-site fetch, but a fetch
-      // inside the page is first-party and authenticated. The content script
-      // returns each image as a data URL, which goes straight into FormData
-      // (for the backend) and into the cache (for reference-photo thumbnails
-      // + the on-page viewer). A photo that fails to load is just skipped;
-      // the sync still completes.
-      if (total) els.canvasSubtitle.textContent = `Fetching ${total} photo${total === 1 ? '' : 's'}…`;
+    // Resolve every photo's blob: reuse the detection-time prefetch when present,
+    // otherwise fetch now (EZ from the panel, IA via the page origin). Photo
+    // fetching is the pipeline's slowest stage, so it's timed here.
+    if (total) els.canvasSubtitle.textContent = `Fetching photos… 0/${total}`;
+    const tImg0 = Date.now();
+    const tab = await activeTab();
+    const { images, thumbCount } = await ensureImages({
+      pageKey: state.pipelinePageKey,
+      photos: photosList,
+      platform: state.pipelinePlatform,
+      fullRes: state.config.fullRes,
+      tab,
+      onProgress: (fdone, ftotal) => {
+        els.canvasSubtitle.textContent = `Fetching photos… ${fdone}/${ftotal}`;
+        setRingProgress(10 + Math.round((fdone / Math.max(1, ftotal)) * 40));
+      },
+    });
 
-      const items = photosList.map((p) => ({
-        id: p.attid,
-        fullResUrl: p.fullResUrl,
-        thumbnailUrl: p.thumbnailUrl,
-      }));
+    // Build the multipart body from the resolved blobs, in scraped order. Each
+    // file is named "<id>.<ext>" so the backend maps bytes → photo by id, and
+    // FormData.append is synchronous so order doesn't matter to the backend.
+    for (const photo of photosList) {
+      const im = images[photo.attid];
+      if (!im) continue; // failed to load → skipped (its card has no thumbnail)
+      form.append('images', im.blob, `${photo.attid}.${im.ext || 'jpg'}`);
+      // Cache the display URL so reference-photo thumbnails + the viewer render
+      // without a second fetch (object URL for EZ, data URL for IA).
+      state.photoBlobUrls[photo.attid] = im.displayUrl;
+    }
+    setRingProgress(50);
 
-      let fetched = [];
-      if (total) {
-        try {
-          const imgRes = await sendToTab({
-            type: 'FETCH_IMAGES',
-            items,
-            preferFullRes: state.config.fullRes,
-          });
-          fetched = (imgRes && imgRes.images) || [];
-        } catch (e) {
-          logActivity('Photo fetch via page failed: ' + e.message, 'error');
-        }
-      }
-      setRingProgress(50);
-
-      for (const r of fetched) {
-        if (!r || !r.dataUrl || !r.id) continue;
-        // Convert the data URL to a Blob for the multipart upload, named
-        // "<id>.jpg" so the backend maps bytes → photo by id.
-        const blob = await (await fetch(r.dataUrl)).blob();
-        form.append('images', blob, `${r.id}.jpg`);
-        // Cache the data URL: it renders directly in the panel and the viewer
-        // (no cookies needed) and, unlike a blob: URL, can be reused freely.
-        state.photoBlobUrls[r.id] = r.dataUrl;
-      }
-
-      // For the end-of-sync summary: how many photos actually loaded.
-      state.lastPhotoStats = { total, ok: Object.keys(state.photoBlobUrls).length };
-    } else {
-      // EZ: the panel fetches photo blobs itself (host permissions exempt
-      // extension pages from CORS and the session cookie rides along) with
-      // limited concurrency - far faster than one-by-one on jobs with many
-      // photos. FormData.append is synchronous, so interleaving is safe, and
-      // the backend maps files by their "<id>.<ext>" name so order doesn't
-      // matter. A photo that fails to fetch is just skipped (its card has no
-      // thumbnail); the sync still completes.
-      let done = 0;
-      if (total) els.canvasSubtitle.textContent = `Fetching photos… 0/${total}`;
-
-      let thumbCount = 0; // photos that only came back thumbnail-grade
-
-      const fetchOne = async (photo) => {
-        const got = await fetchImageBlob(photo, state.config.fullRes);
-        const id = photo.attid;
-        if (got) {
-          // Name the file "<id>.<ext>" so the backend maps bytes → photo by id.
-          const ext = (photo.filename && photo.filename.split('.').pop()) || 'jpg';
-          form.append('images', got.blob, `${id}.${ext}`);
-          // Cache a local object URL so reference-photo thumbnails render without
-          // a second fetch (and without cross-site cookie issues in the panel).
-          if (id) state.photoBlobUrls[id] = URL.createObjectURL(got.blob);
-          if (got.url === photo.thumbnailUrl) thumbCount++;
-        }
-        done++;
-        els.canvasSubtitle.textContent = `Fetching photos… ${done}/${total}`;
-        setRingProgress(10 + Math.round((done / total) * 40));
-      };
-
-      const PHOTO_CONCURRENCY = 5;
-      let cursor = 0;
-      const worker = async () => {
-        while (cursor < photosList.length) await fetchOne(photosList[cursor++]);
-      };
-      await Promise.all(Array.from({ length: Math.min(PHOTO_CONCURRENCY, total) }, worker));
-
-      // For the end-of-sync summary: how many photos actually loaded.
-      const okCount = Object.keys(state.photoBlobUrls).length;
-      state.lastPhotoStats = { total, ok: okCount };
-      // Surface a silent downgrade: if the full image can't be resolved the fetch
-      // falls back to the thumbnail, and the AI would be judging a 3 KB image.
-      if (state.config.fullRes && thumbCount) {
-        logActivity(
-          `${thumbCount}/${total} photos sent as thumbnails - full-size image not available`,
-          'error'
-        );
-      } else if (state.config.fullRes && okCount) {
-        logActivity(`Sent ${okCount} full-size photos`, 'success');
-      }
+    // For the end-of-sync summary: how many photos actually loaded.
+    const okCount = Object.keys(state.photoBlobUrls).length;
+    state.lastPhotoStats = { total, ok: okCount };
+    logActivity(`Photos ready: ${okCount}/${total} - ${Date.now() - tImg0} ms`);
+    // Surface a silent downgrade: if the full image can't be resolved the fetch
+    // falls back to the thumbnail, and the AI would be judging a 3 KB image.
+    if (state.config.fullRes && thumbCount) {
+      logActivity(
+        `${thumbCount}/${total} photos sent as thumbnails - full-size image not available`,
+        'error'
+      );
+    } else if (state.config.fullRes && okCount) {
+      logActivity(`Sent ${okCount} full-size photos`, 'success');
     }
 
     form.append('payload', JSON.stringify(payload));
@@ -1056,7 +1179,9 @@ async function startPipeline() {
     els.canvasTitle.textContent = 'Analyzing';
     els.canvasSubtitle.textContent = 'Sending to the AI backend…';
     setRingProgress(70);
+    const tPost0 = Date.now();
     const resp = await fetch(VERIFY_URL, { method: 'POST', body: form });
+    logActivity(`Backend responded - ${Date.now() - tPost0} ms`);
     if (!resp.ok) throw new Error(`Backend error ${resp.status}`);
     const data = await resp.json();
     state.resultId = data.result_id || '';
