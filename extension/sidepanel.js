@@ -456,8 +456,11 @@ function renderPhotoDates(pd, jobId, platform) {
   block.hidden = false;
   const stale = pd.stale || [];
   const day = pd.completedDay || pd.completedDate;
-  // The page's own name for the completed-date field.
-  const dateLabel = platform === 'IA' ? 'Date Completed' : 'Completed Date Time';
+  // The page's own name for the completed-date field. IA reports the label it
+  // actually matched (it varies by form template - "Date Completed",
+  // "Date & Time Inspected"); EZ's field is fixed, so a constant will do.
+  const dateLabel =
+    pd.completedLabel || (platform === 'IA' ? 'Date Completed' : 'Completed Date Time');
 
   if (!stale.length) {
     const extra = pd.noDate

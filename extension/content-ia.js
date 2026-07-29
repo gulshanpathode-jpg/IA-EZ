@@ -570,58 +570,89 @@
   // part only) against the "Date Completed" input; any photo taken on a
   // different day is flagged as stale.
   //
-  // Which input holds that date is not consistent between form templates: some
-  // name it data-custom-form-name="CompletedDate", others use the bare custom
-  // field id (data-custom-form-name="3011498") and only the visible label
-  // ("Inspection Date") says what it is. So we try the known name first, then
-  // the label, then a lone date field.
+  // Which input holds that date is not consistent between form templates:
+  //   · some name it data-custom-form-name="CompletedDate";
+  //   · others use the bare custom field id (data-custom-form-name="36706")
+  //     and only the visible label says what it is ("Inspection Date",
+  //     "Date & Time Inspected:");
+  //   · the control is <input type="date"> on some forms and
+  //     <input type="datetime-local"> (value "YYYY-MM-DDTHH:MM", often
+  //     readonly) on others.
+  // So we try the known name first, then the label, then a lone date field.
   const COMPLETED_DATE_NAME = "CompletedDate";
 
   // Labels for the date the inspection was performed. The exact list is tried
   // first because forms carry other dates whose labels contain these words
   // ("First Reported Inspection Date:"); only if nothing matches exactly do we
-  // fall back to the loose patterns, most specific first.
+  // fall back to the loose patterns, most specific first. Labels are compared
+  // with "&" spelled out, so "Date & Time Inspected" arrives here as
+  // "date and time inspected".
   const COMPLETED_DATE_LABELS = [
     "date completed",
     "completed date",
     "completion date",
+    "date and time completed",
     "inspection date",
     "date of inspection",
     "date inspected",
+    "date and time inspected",
   ];
   const COMPLETED_DATE_PATTERNS = [
     /\b(date\s+completed|completed\s+date|completion\s+date)\b/,
+    /\bdate\b.*\bcompleted\b/,
     /\b(inspection\s+date|date\s+of\s+inspection|date\s+inspected)\b/,
+    /\bdate\b.*\binspected\b/,
   ];
 
-  // Every live date input in the form. The read-only "Previous Value" twins have
-  // no data-custom-form-name attribute, so the selector alone excludes them; the
-  // -previous name filter is belt-and-braces.
+  // Every live date-ish input in the form - both the date-only and the
+  // date-and-time controls. The read-only "Previous Value" twins have no
+  // data-custom-form-name attribute, so the selector alone excludes them; the
+  // -previous name filter is belt-and-braces. (`readonly` is NOT a filter: the
+  // inspected-date field is routinely readonly on a submitted form.)
   function dateInputs() {
     const root = formRoot();
     if (!root) return [];
     return Array.from(
-      root.querySelectorAll('input[type="date"][data-custom-form-name]')
+      root.querySelectorAll(
+        'input[type="date"][data-custom-form-name],' +
+          'input[type="datetime-local"][data-custom-form-name]'
+      )
     ).filter((i) => !/-previous$/.test(i.name || ""));
   }
 
-  // The visible prompt of a date input, normalised for comparison: lower-cased,
-  // collapsed whitespace, and without the trailing ":" / "*" the forms decorate
-  // labels with.
+  // The visible prompt of a date input, as the form writes it ("Date & Time
+  // Inspected") minus the trailing ":" / "*" decoration.
+  function dateLabelRaw(input) {
+    const container = input && input.closest(".customFormElement");
+    if (!container) return null;
+    // questionPrompt already returns whitespace-collapsed text.
+    return questionPrompt(container).replace(/[\s:*]+$/, "") || null;
+  }
+
+  // The same prompt normalised for comparison: lower-cased, collapsed
+  // whitespace, and "&" spelled out ("date and time inspected").
   function dateLabel(input) {
-    const container = input.closest(".customFormElement");
-    if (!container) return "";
-    return norm(questionPrompt(container)).replace(/[\s:*]+$/, "");
+    return norm(dateLabelRaw(input))
+      .replace(/&/g, " and ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function completedDateInput() {
+    // The explicitly-named field wins whatever its input type is - this is the
+    // one case where the form tells us outright.
+    const root = formRoot();
+    const byName = root
+      ? Array.from(
+          root.querySelectorAll(
+            'input[data-custom-form-name="' + COMPLETED_DATE_NAME + '"]'
+          )
+        ).find((i) => !/-previous$/.test(i.name || ""))
+      : null;
+    if (byName) return byName;
+
     const inputs = dateInputs();
     if (!inputs.length) return null;
-
-    const byName = inputs.find(
-      (i) => i.getAttribute("data-custom-form-name") === COMPLETED_DATE_NAME
-    );
-    if (byName) return byName;
 
     for (const label of COMPLETED_DATE_LABELS) {
       const hit = inputs.find((i) => dateLabel(i) === label);
@@ -637,17 +668,41 @@
     return inputs.length === 1 ? inputs[0] : null;
   }
 
-  // Value of the live inspection-date input ("YYYY-MM-DD") or null.
+  // Raw value of the live inspection-date input - "YYYY-MM-DD" from a date
+  // field, "YYYY-MM-DDTHH:MM" from a datetime-local one - or null.
   function completedDateValue() {
     const input = completedDateInput();
     const v = input ? (input.value || "").trim() : "";
     return v || null;
   }
 
+  // The day part of a native date / datetime-local value. Anything that is not
+  // ISO-leading returns null, which switches the check off rather than flagging
+  // every photo against a value we cannot parse.
+  function dayPart(value) {
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(value || "");
+    return m ? m[1] : null;
+  }
+
   function checkPhotoDates(photos) {
-    const completedDate = completedDateValue();
-    const out = { completedDate, total: photos.length, withDate: 0, noDate: 0, stale: [] };
-    if (!completedDate) return out;
+    const input = completedDateInput();
+    const raw = input ? (input.value || "").trim() : "";
+    const completedDay = dayPart(raw);
+    // Both null when the value cannot be parsed - the panel keys its whole
+    // photo-date block off completedDate, so a half-filled result would render
+    // a comparison we never actually made.
+    const out = {
+      completedDate: completedDay ? raw : null,
+      completedDay,
+      // The form's own name for whichever field we settled on, so the panel can
+      // say "match Date & Time Inspected" instead of guessing at a label.
+      completedLabel: dateLabelRaw(input),
+      total: photos.length,
+      withDate: 0,
+      noDate: 0,
+      stale: [],
+    };
+    if (!completedDay) return out;
     for (const p of photos) {
       const day = (p.imageDate || "").slice(0, 10); // "YYYY-MM-DD HH:MM:SS" → date part
       if (!day) {
@@ -655,7 +710,7 @@
         continue;
       }
       out.withDate++;
-      if (day !== completedDate) {
+      if (day !== completedDay) {
         out.stale.push({
           attid: p.attid,
           label: p.label,
