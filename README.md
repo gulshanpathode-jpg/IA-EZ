@@ -1,4 +1,4 @@
-# Smart Fill - EZ & Inspector ADE
+# SmartFill
 
 One Chrome MV3 side-panel extension that works on both inspection platforms:
 

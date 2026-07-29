@@ -1,5 +1,5 @@
 /**
- * sidepanel/sidepanel.js - Controller for the Smart Fill AI Verifier panel.
+ * sidepanel/sidepanel.js - Controller for the SmartFill AI Verifier panel.
  *
  * One panel, two platforms: EZ Inspections (ezinspections.com job pages) and
  * Inspector ADE (inspectorade.com inspection modals). Three rail tabs: Home

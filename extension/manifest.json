@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Smart Fill - EZ & Inspector ADE",
+  "name": "SmartFill",
   "version": "0.1.0",
   "description": "Scrapes inspection Q&A + labeled photos on EZ Inspections and Inspector ADE, verifies answers with AI, and highlights matches/mismatches.",
   "permissions": ["sidePanel", "activeTab", "scripting", "storage", "unlimitedStorage", "tabs"],
@@ -19,7 +19,7 @@
     "default_path": "sidepanel.html"
   },
   "action": {
-    "default_title": "Open Smart Fill"
+    "default_title": "Open SmartFill"
   },
   "content_scripts": [
     {

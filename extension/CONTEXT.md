@@ -4,9 +4,9 @@
 
 ## What this is
 
-**Smart Fill - EZ & Inspector ADE** - the merged build of the two sibling
-SmartFill Chrome MV3 side-panel extensions (folders `EZ/` and `IA/` in the
-same parent directory). One extension now serves both platforms:
+**SmartFill** - the merged build of the two sibling SmartFill Chrome MV3
+side-panel extensions (folders `EZ/` and `IA/` in the same parent
+directory). One extension now serves both platforms:
 
 - **EZ** = EZ Inspections, job pages at `ezinspections.com/inspManager/*`
 - **IA** = Inspector ADE, inspection modals on `inspectorade.com/orders`
