@@ -570,19 +570,76 @@
   // part only) against the "Date Completed" input; any photo taken on a
   // different day is flagged as stale.
   //
-  // The field is matched by its data-custom-form-name. If the site renames it
-  // (e.g. to "CompletionDate"), update this constant.
+  // Which input holds that date is not consistent between form templates: some
+  // name it data-custom-form-name="CompletedDate", others use the bare custom
+  // field id (data-custom-form-name="3011498") and only the visible label
+  // ("Inspection Date") says what it is. So we try the known name first, then
+  // the label, then a lone date field.
   const COMPLETED_DATE_NAME = "CompletedDate";
 
-  // Value of the live "Date Completed" input ("YYYY-MM-DD") or null. The
-  // read-only "Previous Value" twin has no data-custom-form-name attribute, so
-  // the selector alone excludes it; the -previous name filter is belt-and-braces.
-  function completedDateValue() {
+  // Labels for the date the inspection was performed. The exact list is tried
+  // first because forms carry other dates whose labels contain these words
+  // ("First Reported Inspection Date:"); only if nothing matches exactly do we
+  // fall back to the loose patterns, most specific first.
+  const COMPLETED_DATE_LABELS = [
+    "date completed",
+    "completed date",
+    "completion date",
+    "inspection date",
+    "date of inspection",
+    "date inspected",
+  ];
+  const COMPLETED_DATE_PATTERNS = [
+    /\b(date\s+completed|completed\s+date|completion\s+date)\b/,
+    /\b(inspection\s+date|date\s+of\s+inspection|date\s+inspected)\b/,
+  ];
+
+  // Every live date input in the form. The read-only "Previous Value" twins have
+  // no data-custom-form-name attribute, so the selector alone excludes them; the
+  // -previous name filter is belt-and-braces.
+  function dateInputs() {
     const root = formRoot();
-    if (!root) return null;
-    const input = Array.from(
-      root.querySelectorAll('input[data-custom-form-name="' + COMPLETED_DATE_NAME + '"]')
-    ).find((i) => !/-previous$/.test(i.name || ""));
+    if (!root) return [];
+    return Array.from(
+      root.querySelectorAll('input[type="date"][data-custom-form-name]')
+    ).filter((i) => !/-previous$/.test(i.name || ""));
+  }
+
+  // The visible prompt of a date input, normalised for comparison: lower-cased,
+  // collapsed whitespace, and without the trailing ":" / "*" the forms decorate
+  // labels with.
+  function dateLabel(input) {
+    const container = input.closest(".customFormElement");
+    if (!container) return "";
+    return norm(questionPrompt(container)).replace(/[\s:*]+$/, "");
+  }
+
+  function completedDateInput() {
+    const inputs = dateInputs();
+    if (!inputs.length) return null;
+
+    const byName = inputs.find(
+      (i) => i.getAttribute("data-custom-form-name") === COMPLETED_DATE_NAME
+    );
+    if (byName) return byName;
+
+    for (const label of COMPLETED_DATE_LABELS) {
+      const hit = inputs.find((i) => dateLabel(i) === label);
+      if (hit) return hit;
+    }
+
+    for (const re of COMPLETED_DATE_PATTERNS) {
+      const hit = inputs.find((i) => re.test(dateLabel(i)));
+      if (hit) return hit;
+    }
+
+    // A form with exactly one date field can only be dating the inspection.
+    return inputs.length === 1 ? inputs[0] : null;
+  }
+
+  // Value of the live inspection-date input ("YYYY-MM-DD") or null.
+  function completedDateValue() {
+    const input = completedDateInput();
     const v = input ? (input.value || "").trim() : "";
     return v || null;
   }
