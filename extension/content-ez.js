@@ -492,14 +492,30 @@
   // only sound comparison is at DAY granularity: month + day.
 
   // The "Completed Date Time" label; if the site renames the field, update this id.
-  const COMPLETED_DATE_ID = "Main_LabelCompleteDateTime";
+  
+  // const COMPLETED_DATE_ID = "Main_LabelCompleteDateTime";
+  const COMPLETED_DATE_ID = "Main_tdCompleteValue";  //Start of change: 31-Jul-2026 by Anuja
 
-  function completedDate() {
-    const raw = text(document.getElementById(COMPLETED_DATE_ID));
-    const m = raw.match(/(\d{1,2})\s*\/\s*(\d{1,2})/); // MM/DD (year absent)
-    if (!m) return null;
-    return { month: +m[1], day: +m[2], raw };
-  }
+
+  //-----Old implementation (by Gulshan)------
+  // function completedDate() {  
+  //   const raw = text(document.getElementById(COMPLETED_DATE_ID));
+  //   const m = raw.match(/(\d{1,2})\s*\/\s*(\d{1,2})/); // MM/DD (year absent)
+  //   if (!m) return null;
+  //   return { month: +m[1], day: +m[2], raw };
+  // }
+
+ // -------- Updated implementation: 31-Jul-2026 (by Anuja)-------
+function completedDate() {
+  const el = document.getElementById(COMPLETED_DATE_ID);
+  if (!el) return null;
+  const inputEl = el.querySelector ? el.querySelector('input') : null;
+  const raw = inputEl ? (inputEl.value || '').trim() : text(el);
+  const m = raw.match(/(\d{1,2})\s*\/\s*(\d{1,2})/); 
+  if (!m) return null;
+  return { month: +m[1], day: +m[2], raw };
+}
+// --------End of Updated implementation -----------
 
   // EZ fills the Completed Date Time label AFTER the form appears, so on a slow
   // load it can still be empty the first time we read it - which used to make the

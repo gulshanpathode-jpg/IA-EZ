@@ -597,11 +597,14 @@
     "date inspected",
     "date and time inspected",
   ];
-  const COMPLETED_DATE_PATTERNS = [
+const COMPLETED_DATE_PATTERNS = [
     /\b(date\s+completed|completed\s+date|completion\s+date)\b/,
     /\bdate\b.*\bcompleted\b/,
     /\b(inspection\s+date|date\s+of\s+inspection|date\s+inspected)\b/,
     /\bdate\b.*\binspected\b/,
+    // ------------"What date was the property visited?"----------new changes By Anuja---"
+    /\b(property\s+visited|date\s+visited|visit\s+date)\b/,
+    /\bdate\b.*\bvisited\b/,
   ];
 
   // Every live date-ish input in the form - both the date-only and the
