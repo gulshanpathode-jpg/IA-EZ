@@ -431,7 +431,8 @@
     return cut || raw;
   }
 
-  // ---------- work code ----------
+  // ---------- work code ----------by gulshan--------(old implementation)-------------
+
   // The page title span holds e.g.
   //   "Cyprexx Occupancy Verification Inspection  (4606603)"
   // We match the title against a known list of work codes. The title may carry
@@ -439,33 +440,54 @@
   // look for a known code as an exact (case-insensitive) substring. On a match
   // we return the canonical code; otherwise we return null so downstream
   // consumers can tell the code couldn't be identified.
-  const KNOWN_WORK_CODES = [
-    "Cyprexx Occupancy Verification Inspection",
-    "Cyprexx Aspen Grove V2 Property Condition",
-    "Cyprexx Sales Date Inspection Instructions",
-    "M&T Door Knock Inspection",
-    "Foreclosure (Contact)",
-    "CONTACT INSPECTION",
-    "Cyprexx Aspen Grove V2 REO",
-    "Cyprexx Interior/Exterior",
-    "Vacancy Task",
-    "NFR-WT2",
-  ];
+ 
 
-  function matchWorkCode(raw) {
-    if (!raw) return null;
-    const haystack = raw.replace(/\s+/g, " ").trim().toLowerCase();
-    for (const code of KNOWN_WORK_CODES) {
-      const needle = code.replace(/\s+/g, " ").trim().toLowerCase();
-      if (haystack.includes(needle)) return code;
-    }
-    return null;
-  }
+//   const KNOWN_WORK_CODES = [
+//   "Cyprexx Occupancy Verification Inspection",
+//   "Cyprexx Aspen Grove V2 Property Condition",
+//   "Cyprexx Sales Date Inspection Instructions",
+//   "M&T Door Knock Inspection",
+//   "Foreclosure (Contact)",
+//   "CONTACT INSPECTION",
+//   "Cyprexx Aspen Grove V2 REO",
+//   "Cyprexx Interior/Exterior",
+//   "Vacancy Task",
+//   "NFR-WT2",
+//   "SS - FM Not Secured",
+//   "SS - FM No Contact",
+//   "SS - Interior - Previously Secured",
+//   "G - Occupancy Knock Task",
+//   "INTERIOR/EXTERIOR INSPECTION",           // catches the "A [date] - INTERIOR/EXTERIOR INSPECTION" pattern
+//   "CONTACT WITH DOORCARD INSPECTION",       // catches the "Not Performed! A - CONTACT WITH DOORCARD INSPECTION" pattern
+//   "Cyprexx Sales Date Inspection",          // in case the real title omits "Instructions" — verify actual full title first
+// ];
 
+  // function matchWorkCode(raw) {
+  //   if (!raw) return null;
+  //   const haystack = raw.replace(/\s+/g, " ").trim().toLowerCase();
+  //   for (const code of KNOWN_WORK_CODES) {
+  //     const needle = code.replace(/\s+/g, " ").trim().toLowerCase();
+  //     if (haystack.includes(needle)) return code;
+  //   }
+  //   return null;
+  // }
+
+  // function scrapeWorkCode() {
+  //   const span = document.getElementById("Main_LabelTitle");
+  //   if (!span) return null;
+  //   return matchWorkCode(text(span));
+  // }
+
+
+  // --------------By Anuja-------new implementation-----------------
+  
   function scrapeWorkCode() {
     const span = document.getElementById("Main_LabelTitle");
     if (!span) return null;
-    return matchWorkCode(text(span));
+    const raw = text(span);
+    if (!raw) return null;
+    const cut = raw.split(/\s*\(/)[0].trim();
+    return cut || null;
   }
 
   // The job identifier is the Work Order number shown on the page
