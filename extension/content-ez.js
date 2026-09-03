@@ -531,11 +531,22 @@
 function completedDate() {
   const el = document.getElementById(COMPLETED_DATE_ID);
   if (!el) return null;
-  const inputEl = el.querySelector ? el.querySelector('input') : null;
+  //exclude a "-previous" readonly twin input (mirrors IA's guard)
+  const inputEl = el.querySelector
+    ? el.querySelector('input:not([name$="-previous"])') || el.querySelector('input')
+    : null;
   const raw = inputEl ? (inputEl.value || '').trim() : text(el);
-  const m = raw.match(/(\d{1,2})\s*\/\s*(\d{1,2})/); 
-  if (!m) return null;
-  return { month: +m[1], day: +m[2], raw };
+  if (!raw) return null;                                           
+
+  //handle ISO date values ("2026-09-02") from type="date" inputs
+  let m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return { month: +m[2], day: +m[3], raw };
+
+  //original slash-format match kept as fallback, not the only path
+  m = raw.match(/(\d{1,2})\s*\/\s*(\d{1,2})/);
+  if (m) return { month: +m[1], day: +m[2], raw };
+
+  return null;                                                      
 }
 // --------End of Updated implementation -----------
 
