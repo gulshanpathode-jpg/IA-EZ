@@ -588,6 +588,7 @@
   // with "&" spelled out, so "Date & Time Inspected" arrives here as
   // "date and time inspected".
   const COMPLETED_DATE_LABELS = [
+    "date",
     "date completed",
     "completed date",
     "completion date",
@@ -620,7 +621,7 @@ const COMPLETED_DATE_PATTERNS = [
         'input[type="date"][data-custom-form-name],' +
           'input[type="datetime-local"][data-custom-form-name]'
       )
-    ).filter((i) => !/-previous$/.test(i.name || ""));
+    ).filter((i) => !/-previous$/.test(i.name || "") && isVisible(i));
   }
 
   // The visible prompt of a date input, as the form writes it ("Date & Time
@@ -628,8 +629,16 @@ const COMPLETED_DATE_PATTERNS = [
   function dateLabelRaw(input) {
     const container = input && input.closest(".customFormElement");
     if (!container) return null;
-    // questionPrompt already returns whitespace-collapsed text.
-    return questionPrompt(container).replace(/[\s:*]+$/, "") || null;
+      const own = questionPrompt(container).replace(/[\s:*]+$/, "");
+  if (own && own.toLowerCase() !== "date") return own;              
+
+  // fall back to the enclosing module's section heading
+  // ("Date Completed") when the field's own prompt is empty/generic,
+  //same fallback scrapeQuestions() already uses.
+  const module = container.closest(".customFormModule") || container.parentElement;
+  const heading = module ? module.querySelector(".formHeading") : null;
+  const headingText = heading ? text(heading).replace(/[\s:*]+$/, "") : "";
+  return headingText || own || null; 
   }
 
   // The same prompt normalised for comparison: lower-cased, collapsed
@@ -650,7 +659,7 @@ const COMPLETED_DATE_PATTERNS = [
           root.querySelectorAll(
             'input[data-custom-form-name="' + COMPLETED_DATE_NAME + '"]'
           )
-        ).find((i) => !/-previous$/.test(i.name || ""))
+        ).find((i) => !/-previous$/.test(i.name || "")  && isVisible(i) )
       : null;
     if (byName) return byName;
 
@@ -678,7 +687,7 @@ const COMPLETED_DATE_PATTERNS = [
     const v = input ? (input.value || "").trim() : "";
     return v || null;
   }
-
+ 
   // The day part of a native date / datetime-local value. Anything that is not
   // ISO-leading returns null, which switches the check off rather than flagging
   // every photo against a value we cannot parse.
@@ -817,23 +826,44 @@ const COMPLETED_DATE_PATTERNS = [
   // whenever a NEW inspection modal appears (a different inspection id), so the
   // panel re-detects automatically.
 
-  let lastAnnounced = null;
-  function maybeAnnounce() {
-    if (!formRoot()) {
-      lastAnnounced = null; // modal closed - allow re-announce when it reopens
-      return;
-    }
-    const id = inspectionId();
-    if (!id || id === lastAnnounced) return;
-    lastAnnounced = id;
+let lastAnnounced = null;
+let announceRetryTimer = null;
+
+function maybeAnnounce() {
+  if (!formRoot()) {
+    lastAnnounced = null;
+    clearTimeout(announceRetryTimer);
+    return;
+  }
+  const id = inspectionId();
+  if (!id) return;
+
+  const isNew = id !== lastAnnounced;
+  lastAnnounced = id;
+  send();
+
+  if (isNew) {
+    clearTimeout(announceRetryTimer);
+    let tries = 0;
+    const retry = () => {
+      if (!formRoot() || inspectionId() !== id) return;
+      if (completedDateInput() && completedDateInput().value) return;
+      send();
+      if (++tries < 5) announceRetryTimer = setTimeout(retry, 400);
+    };
+    announceRetryTimer = setTimeout(retry, 400);
+  }
+
+  function send() {
     try {
       chrome.runtime.sendMessage({ type: "ADE_PAGE_READY", jobId: id, url: location.href });
     } catch (e) {
       // No receiver (panel closed) - harmless.
     }
   }
+}
 
-  const obs = new MutationObserver(() => maybeAnnounce());
-  obs.observe(document.documentElement, { childList: true, subtree: true });
-  maybeAnnounce();
+const obs = new MutationObserver(() => maybeAnnounce());
+obs.observe(document.documentElement, { childList: true, subtree: true });
+maybeAnnounce();
 })();
