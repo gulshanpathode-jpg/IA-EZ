@@ -736,11 +736,12 @@ async function loadJobs() {
 // 6. Status canvas helpers
 // ═════════════════════════════════════════════════════════════════════
 
-function setRingProgress(percent) {
+function setRingProgress(percent, label) {
   const clamped = Math.max(0, Math.min(100, percent));
   const circumference = 175.93; // 2π * 28
   els.ringProgress.style.strokeDashoffset = circumference * (1 - clamped / 100);
-  els.canvasProgressLabel.textContent = `${Math.round(clamped)}% COMPLETED`;
+  els.canvasProgressLabel.textContent = 
+  label != null ? label :`${Math.round(clamped)}% COMPLETED`;
 }
 
 function setRingSpinning(on) {
@@ -1141,10 +1142,13 @@ async function startPipeline() {
       platform: state.pipelinePlatform,
       fullRes: state.config.fullRes,
       tab,
-      onProgress: (fdone, ftotal) => {
-        els.canvasSubtitle.textContent = `Fetching photos… ${fdone}/${ftotal}`;
-        setRingProgress(10 + Math.round((fdone / Math.max(1, ftotal)) * 40));
-      },
+     onProgress: (fdone, ftotal) => {
+  els.canvasSubtitle.textContent = `Fetching photos… ${fdone}/${ftotal}`;
+  setRingProgress(
+    10 + Math.round((fdone / Math.max(1, ftotal)) * 40),
+    `${fdone}/${ftotal} PHOTO${ftotal === 1 ? '' : 'S'} FETCHED`
+  );
+},
     });
 
     // Build the multipart body from the resolved blobs, in scraped order. Each
@@ -1181,7 +1185,7 @@ async function startPipeline() {
     state.pipeline = 'analyzing';
     els.canvasTitle.textContent = 'Analyzing';
     els.canvasSubtitle.textContent = 'Sending to the AI backend…';
-    setRingProgress(70);
+    setRingProgress(70, `${okCount}/${total} PHOTO${total === 1 ? '' : 'S'} SENT`);
     const tPost0 = Date.now();
     const resp = await fetch(VERIFY_URL, { method: 'POST', body: form });
     logActivity(`Backend responded - ${Date.now() - tPost0} ms`);
